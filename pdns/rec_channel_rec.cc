@@ -1132,6 +1132,27 @@ static StatsMap toStatsMap(const string& name, const pdns::AtomicHistogram& hist
   return entries;
 }
 
+static StatsMap toRPZStatsMap(const string& name, const std::unordered_map<std::string, std::atomic<uint64_t>>& map)
+{
+  const string pbasename = getPrometheusName(name);
+  StatsMap entries;
+
+  for (const auto& entry: map) {
+    auto &key = entry.first;
+    auto count = entry.second.load();
+    std::string sname, pname;
+    if (key.empty()) {
+      sname = name + "-filter";
+      pname = pbasename + "{type=\"filter\"}";
+    } else {
+      sname = name + "-rpz-" + key;
+      pname = pbasename + "{type=\"rpz\",zone=\"" + entry.first + "\"}";
+    }
+    entries.emplace(make_pair(sname, StatsMapEntry{pname, std::to_string(count)}));
+  }
+  return entries;
+}
+
 extern ResponseStats g_rs;
 
 static void registerAllStats1()
@@ -1383,6 +1404,9 @@ static void registerAllStats1()
   });
   addGetStat("cumul-auth6answers", []() {
     return toStatsMap(g_stats.cumulativeAuth6Answers.getName(), g_stats.cumulativeAuth6Answers);
+  });
+  addGetStat("policy-hits", []() {
+    return toRPZStatsMap("policy-hits", g_stats.policyHits);
   });
 }
 
