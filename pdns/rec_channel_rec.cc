@@ -1364,6 +1364,10 @@ static void registerAllStats1()
   addGetStat("taskqueue-expired",  []() { return getTaskExpired(); });
   addGetStat("taskqueue-size",  []() { return getTaskSize(); });
 
+  addGetStat("almost-expired-pushed",  []() { return getAlmostExpiredTasksPushed(); });
+  addGetStat("almost-expired-run",  []() { return getAlmostExpiredTasksRun(); });
+  addGetStat("almost-expired-exceptions",  []() { return getAlmostExpiredTaskExceptions(); });
+
   /* make sure that the ECS stats are properly initialized */
   SyncRes::clearECSStats();
   for (size_t idx = 0; idx < SyncRes::s_ecsResponsesBySubnetSize4.size(); idx++) {

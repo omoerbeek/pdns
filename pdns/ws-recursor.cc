@@ -1046,6 +1046,18 @@ const std::map<std::string, MetricDefinition> MetricDefinitionStorage::metrics =
   { "cumul-auth6answers-count",
     MetricDefinition(PrometheusMetricType::histogram,
                      "histogram of authoritative answer times over IPV6")},
+
+  { "almost-expired-pushed",
+    MetricDefinition(PrometheusMetricType::counter,
+                     "number of almost-expired tasks pushed")},
+
+  { "almost-expired-run",
+    MetricDefinition(PrometheusMetricType::counter,
+                     "number of almost-expired tasks run")},
+
+  { "almost-expired-exceptions",
+    MetricDefinition(PrometheusMetricType::counter,
+                     "number of almost-expired tasks that caused an exception")},
 };
 
 #define CHECK_PROMETHEUS_METRICS 0
