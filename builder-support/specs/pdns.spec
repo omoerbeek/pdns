@@ -225,6 +225,13 @@ chmod 600 %{buildroot}%{_sysconfdir}/%{name}/pdns.conf
 %{__mv} %{buildroot}/%{_bindir}/zone2ldap %{buildroot}/%{_bindir}/pdns-zone2ldap
 %{__mv} %{buildroot}/%{_mandir}/man1/zone2ldap.1 %{buildroot}/%{_mandir}/man1/pdns-zone2ldap.1
 
+# The EL7 and 8 systemd actually supports RUNTIME_DIR, but its version number is older than that, so add it back
+%if 0%{?rhel} < 9
+# TODO relying on "# Sandboxing" to be present is _terrible_
+sed -e 's!/pdns_server!& --socket-dir=%t/pdns!' -e 's!# Sandboxing!RuntimeDirectory=pdns\n&!' -i %{buildroot}/%{_unitdir}/pdns.service
+sed -e 's!/pdns_server!& --socket-dir=%t/pdns-%i!' -e 's!# Sandboxing!RuntimeDirectory=pdns-%i\n&!' -i %{buildroot}/%{_unitdir}/pdns@.service
+%endif
+
 %check
 PDNS_TEST_NO_IPV6=1 make %{?_smp_mflags} -C pdns check || (cat pdns/test-suite.log && false)
 
