@@ -73,6 +73,13 @@ sed -i \
     -e 's/# setgid=/setgid=pdns-recursor/' \
     %{buildroot}%{_sysconfdir}/%{name}/recursor.conf
 
+# The EL7 and 8 systemd actually supports RUNTIME_DIR, but its version number is older than that, so add it back
+%if 0%{?rhel} < 9
+# TODO relying on "# Sandboxing" to be present is _terrible_
+sed -e 's!/pdns_recursor!& --socket-dir=%t/pdns-recursor!' -e 's!# Sandboxing!RuntimeDirectory=pdns-recursor\n&!' -i %{buildroot}/%{_unitdir}/pdns-recursor.service
+sed -e 's!/pdns_recursor!& --socket-dir=%t/pdns-recursor-%i!' -e 's!# Sandboxing!RuntimeDirectory=pdns-recursor-%i\n&!' -i %{buildroot}/%{_unitdir}/pdns-recursor@.service
+%endif
+
 %pre
 getent group pdns-recursor > /dev/null || groupadd -r pdns-recursor
 getent passwd pdns-recursor > /dev/null || \
