@@ -140,5 +140,7 @@ public:
   static void usleep( unsigned long usec );
 
   static time_t timegm(struct tm *tm);
+
+  static size_t strftime(char *buf, size_t sz, const char *format, const struct tm *tm);
   
 };

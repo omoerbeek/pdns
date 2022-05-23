@@ -264,3 +264,10 @@ time_t Utility::timegm(struct tm *const t)
   return ((day + t->tm_hour) * i + t->tm_min) * i + t->tm_sec;
 }
 
+size_t Utility::strftime(char *buf, size_t sz, const char *format, const struct tm *tm)
+{
+  // strftime is not thread safe, it can access locale information
+  static std::mutex m;
+  auto lock = std::lock_guard(m);
+  return ::strftime(buf, sz, format, tm);
+}

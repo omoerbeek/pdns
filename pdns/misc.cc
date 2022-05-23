@@ -55,6 +55,7 @@
 #include <boost/format.hpp>
 #include "iputils.hh"
 #include "dnsparser.hh"
+#include "utility.hh"
 #include <sys/types.h>
 #include <pwd.h>
 #include <grp.h>
@@ -232,7 +233,7 @@ string nowTime()
   localtime_r(&now, &tm);
   char buffer[30];
   // YYYY-mm-dd HH:MM:SS TZOFF
-  size_t ret = strftime(buffer, sizeof(buffer), "%F %T %z", &tm);
+  size_t ret = Utility::strftime(buffer, sizeof(buffer), "%F %T %z", &tm);
   if (ret == 0) {
     buffer[0] = '\0';
   }

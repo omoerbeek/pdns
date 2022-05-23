@@ -27,6 +27,7 @@
 
 #include "logger.hh"
 #include "misc.hh"
+#include "utility.hh"
 #ifndef RECURSOR
 #include "statbag.hh"
 extern StatBag S;
@@ -62,7 +63,7 @@ void Logger::log(const string& msg, Urgency u) noexcept
       time_t t;
       time(&t);
       localtime_r(&t, &tm);
-      if (strftime(buffer, sizeof(buffer), "%b %d %H:%M:%S ", &tm) == 0) {
+      if (Utility::strftime(buffer, sizeof(buffer), "%b %d %H:%M:%S ", &tm) == 0) {
         buffer[0] = '\0';
       }
     }

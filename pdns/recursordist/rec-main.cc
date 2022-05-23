@@ -858,11 +858,8 @@ static const char* toTimestampStringMilli(const struct timeval& tv, char* buf, s
 {
   size_t len = 0;
   if (s_timestampFormat != "%s") {
-    // strftime is not thread safe, it can access locale information
-    static std::mutex m;
-    auto lock = std::lock_guard(m);
     struct tm tm;
-    len = strftime(buf, sz, s_timestampFormat.c_str(), localtime_r(&tv.tv_sec, &tm));
+    len = Utility::strftime(buf, sz, s_timestampFormat.c_str(), localtime_r(&tv.tv_sec, &tm));
   }
   if (len == 0) {
     len = snprintf(buf, sz, "%lld", static_cast<long long>(tv.tv_sec));

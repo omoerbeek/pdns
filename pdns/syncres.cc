@@ -994,7 +994,7 @@ static const char* timestamp(const struct timeval& tv, char* buf, size_t sz)
 {
   const std::string s_timestampFormat = "%Y-%m-%dT%T";
   struct tm tm;
-  size_t len = strftime(buf, sz, s_timestampFormat.c_str(), localtime_r(&tv.tv_sec, &tm));
+  size_t len = Utility::strftime(buf, sz, s_timestampFormat.c_str(), localtime_r(&tv.tv_sec, &tm));
   if (len == 0) {
     int ret = snprintf(buf, sz, "%lld", static_cast<long long>(tv.tv_sec));
     if (ret < 0 || static_cast<size_t>(ret) >= sz) {
@@ -1016,7 +1016,7 @@ static const char* timestamp(time_t t, char* buf, size_t sz)
 {
   const std::string s_timestampFormat = "%Y-%m-%dT%T";
   struct tm tm;
-  size_t len = strftime(buf, sz, s_timestampFormat.c_str(), localtime_r(&t, &tm));
+  size_t len = Utility::strftime(buf, sz, s_timestampFormat.c_str(), localtime_r(&t, &tm));
   if (len == 0) {
     int ret = snprintf(buf, sz, "%lld", static_cast<long long>(t));
     if (ret < 0 || static_cast<size_t>(ret) >= sz) {
