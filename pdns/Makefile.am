@@ -185,7 +185,8 @@ EXTRA_PROGRAMS = \
 	speedtest \
 	testrunner \
 	tsig-tests \
-	zone2ldap
+	zone2ldap \
+	dnssecmeasure
 
 pdns_server_SOURCES = \
 	arguments.cc arguments.hh \
@@ -1501,6 +1502,49 @@ pdns_control_SOURCES = \
 pdns_control_LDFLAGS = \
        $(AM_LDFLAGS) \
        $(LIBCRYPTO_LDFLAGS)
+
+dnssecmeasure_SOURCES = \
+	arguments.cc arguments.hh\
+	base32.cc \
+	base64.cc base64.hh \
+	dns_random.cc dns_random.hh \
+	dnslabeltext.cc \
+	dnsname.cc dnsname.hh \
+	dnsparser.cc dnsparser.hh \
+	dnsrecords.cc \
+	dnssecinfra.cc \
+	dnssecmeasure.cc \
+	dnswriter.cc dnswriter.hh \
+	ednssubnet.cc ednssubnet.hh \
+	filterpo.hh \
+	gss_context.cc gss_context.hh \
+	iputils.cc \
+	logger.cc \
+	misc.cc misc.hh \
+	nsecrecords.cc \
+	opensslsigners.cc opensslsigners.hh \
+	qtype.cc \
+	rcpgenerator.cc rcpgenerator.hh \
+	rec-lua-conf.hh \
+	recursor_cache.hh \
+	root-dnssec.hh \
+	sholder.hh \
+	sillyrecords.cc \
+	sortlist.hh \
+	sstuff.hh \
+	statbag.cc \
+	svc-records.cc svc-records.hh \
+	unix_utility.cc 
+
+
+dnssecmeasure_LDFLAGS = $(AM_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS)
+dnssecmeasure_LDADD = $(LIBCRYPTO_LIBS)
+
+if LIBSODIUM
+dnssecmeasure_SOURCES += sodiumsigners.cc
+dnssecmeasure_LDADD += $(LIBSODIUM_LIBS)
+endif
 
 if UNIT_TESTS
 noinst_PROGRAMS = testrunner
