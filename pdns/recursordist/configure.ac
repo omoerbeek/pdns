@@ -35,7 +35,9 @@ AC_DEFINE([RECURSOR], [1],
 m4_pattern_forbid([^_?PKG_[A-Z_]+$], [*** pkg.m4 missing, please install pkg-config])
 
 AX_CXX_COMPILE_STDCXX_17([noext], [mandatory])
-LT_INIT()
+
+LT_INIT([disable-static dlopen])
+AC_SUBST([LIBDL], [$lt_cv_dlopen_libs])
 
 PDNS_CHECK_OS
 PDNS_CHECK_NETWORK_LIBS

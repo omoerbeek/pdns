@@ -39,6 +39,7 @@
 #include "secpoll-recursor.hh"
 #include "logging.hh"
 #include "dnsseckeeper.hh"
+#include "rusttest.hh"
 
 #ifdef NOD_ENABLED
 #include "nod.hh"
@@ -3114,6 +3115,17 @@ static pair<int, bool> doConfig(Logr::log_t startupLog, const string& configname
   return {0, false};
 }
 
+static void rustTest()
+{
+  rustHello();
+  int32_t rustTest = 0;
+  rustIncrement(&rustTest);
+  assert(rustTest == 1);
+  string rustStr = "foo";
+  rustString(rustStr.data());
+  assert(rustStr == "goo");
+}
+
 int main(int argc, char** argv)
 {
   g_argc = argc;
@@ -3124,6 +3136,8 @@ int main(int argc, char** argv)
   reportOtherTypes();
 
   int ret = EXIT_SUCCESS;
+
+  rustTest();
 
   try {
     initArgs();
@@ -3271,7 +3285,6 @@ int main(int argc, char** argv)
       g_maxPacketCacheEntries = ::arg().asNum("max-packetcache-entries");
       g_packetCache = std::make_unique<RecursorPacketCache>(g_maxPacketCacheEntries, ::arg().asNum("packetcache-shards"));
     }
-
     ret = serviceMain(startupLog);
   }
   catch (const PDNSException& ae) {

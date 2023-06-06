@@ -75,7 +75,8 @@ EXTRA_DIST = \
 	test_libcrypto \
 	pdns-recursor.service.in \
 	RECURSOR-MIB.txt \
-	builder-support/gen-version
+	builder-support/gen-version \
+	rusttest.rs
 
 dist-hook:
 	for file in $$(find $(distdir)/docs -type l); do \
@@ -189,6 +190,7 @@ pdns_recursor_SOURCES = \
 	root-addresses.hh \
 	root-dnssec.hh \
 	rpzloader.cc rpzloader.hh \
+	rusttest.hh \
 	secpoll-recursor.cc secpoll-recursor.hh \
 	secpoll.cc secpoll.hh \
 	sha.hh \
@@ -236,7 +238,9 @@ pdns_recursor_LDADD = \
 	$(RT_LIBS) \
 	$(BOOST_SYSTEM_LIBS) \
 	$(PROBDS_LIBS) \
-	$(LIBCAP_LIBS)
+	$(LIBCAP_LIBS) \
+	librusttest.a \
+	$(LIBDL)
 
 pdns_recursor_LDFLAGS = $(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS) $(BOOST_CONTEXT_LDFLAGS) \
@@ -344,6 +348,7 @@ testrunner_SOURCES = \
 	test-recursorcache_cc.cc \
 	test-reczones-helpers.cc \
 	test-rpzloader_cc.cc \
+	test-rust.cc \
 	test-secpoll_cc.cc \
 	test-signers.cc \
 	test-syncres_cc.cc \
@@ -382,7 +387,9 @@ testrunner_LDADD = \
 	$(RT_LIBS) \
 	$(BOOST_SYSTEM_LIBS) \
 	$(PROBDS_LIBS) \
-	$(LIBCAP_LIBS)
+	$(LIBCAP_LIBS) \
+	librusttest.a \
+	$(LIBDL)
 
 if NOD_ENABLED
 testrunner_SOURCES +=   nod.hh nod.cc \
@@ -656,10 +663,16 @@ systemdsystemunit_DATA = \
 
 CLEANFILES += \
 	pdns-recursor.service \
-	pdns-recursor@.service
+	pdns-recursor@.service \
+	librusttest.a
 
 endif
 
 if !HAVE_LUA_HPP
 include lua_hpp.mk
 endif
+
+RUSTC ?= rustc
+
+librusttest.a: rusttest.rs
+	$(RUSTC) $(RUST_TARGET) --crate-type=staticlib rusttest.rs

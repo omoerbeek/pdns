@@ -20,6 +20,7 @@ BuildRequires: systemd-devel
 BuildRequires: openssl-devel
 BuildRequires: fstrm-devel
 BuildRequires: libcurl-devel
+BuildRequires: rust
 
 %if 0%{?amzn} != 2023
 BuildRequires: net-snmp-devel
