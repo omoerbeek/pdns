@@ -56,8 +56,6 @@ rec_build_deps = [
     'libcap-dev',
     'libfstrm-dev',
     'libsnmp-dev',
-    'rustc',
-    'cargo'
 ]
 rec_bulk_deps = [
     'curl',
@@ -294,6 +292,10 @@ def install_dnsdist_test_deps(c): # FIXME: rename this, we do way more than apt-
 
 @task
 def install_rec_build_deps(c):
+    c.run('curl -o /tmp/rust-1.70.0-x86_64-unknown-linux-gnu.tar.gz https://static.rust-lang.org/dist/rust-1.70.0-x86_64-unknown-linux-gnu.tar.gz')
+    c.run('tar -C /tmp -zxf /tmp/rust-1.70.0-x86_64-unknown-linux-gnu.tar.gz')
+    c.sudo('sh -c \'cd /tmp/rust-1.70.0-x86_64-unknown-linux-gnu && sh ./install.sh\'')
+    c.run('rm -rf /tmp/rust-1.70.0-x86_64-unknown-linux-gnu.tar.gz /tmp/rust-1.70.0-x86_64-unknown-linux-gnu')
     c.sudo('apt-get install -y --no-install-recommends ' +  ' '.join(all_build_deps + git_build_deps + rec_build_deps))
 
 @task
