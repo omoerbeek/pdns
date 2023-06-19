@@ -10,3 +10,7 @@ name = "rusttest"
 crate-type = ["staticlib"]
 
 [dependencies]
+cxx = "1.0"
+
+[build-dependencies]
+cxx-build = "1.0"

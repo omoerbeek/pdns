@@ -56,7 +56,8 @@ rec_build_deps = [
     'libcap-dev',
     'libfstrm-dev',
     'libsnmp-dev',
-    'rustc'
+    'rustc',
+    'cargo'
 ]
 rec_bulk_deps = [
     'curl',
