@@ -76,7 +76,7 @@ EXTRA_DIST = \
 	pdns-recursor.service.in \
 	RECURSOR-MIB.txt \
 	builder-support/gen-version \
-	rusttest.rs
+	rust/experiment/src/rusttest.rs
 
 dist-hook:
 	for file in $$(find $(distdir)/docs -type l); do \
@@ -239,7 +239,7 @@ pdns_recursor_LDADD = \
 	$(BOOST_SYSTEM_LIBS) \
 	$(PROBDS_LIBS) \
 	$(LIBCAP_LIBS) \
-	librusttest.a \
+	rust/experiment/target/release/librusttest.a \
 	$(LIBDL)
 
 pdns_recursor_LDFLAGS = $(AM_LDFLAGS) \
@@ -388,7 +388,7 @@ testrunner_LDADD = \
 	$(BOOST_SYSTEM_LIBS) \
 	$(PROBDS_LIBS) \
 	$(LIBCAP_LIBS) \
-	librusttest.a \
+	rust/experiment/target/release/librusttest.a \
 	$(LIBDL)
 
 if NOD_ENABLED
@@ -663,8 +663,7 @@ systemdsystemunit_DATA = \
 
 CLEANFILES += \
 	pdns-recursor.service \
-	pdns-recursor@.service \
-	librusttest.a
+	pdns-recursor@.servie
 
 endif
 
@@ -674,5 +673,9 @@ endif
 
 RUSTC ?= rustc
 
-librusttest.a: rusttest.rs
-	$(RUSTC) $(RUST_TARGET) --crate-type=staticlib rusttest.rs
+rust/experiment/target/release/librusttest.a: rust/experiment/src/lib.rs
+	cd rust/experiment && cargo build --release $(RUST_TARGET)
+
+clean-local:
+	rm -rf rust/experiment/target
+
