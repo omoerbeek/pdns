@@ -673,7 +673,7 @@ endif
 
 RUSTC ?= rustc
 
-rust/experiment/target/release/librusttest.a: rust/experiment/src/lib.rs
+rust/experiment/target/release/librusttest.a: rust/experiment/src/lib.rs rust/experiment/target/cxxbridge/experiment/src/lib.rs.h
 	cd rust/experiment && cargo build --release $(RUST_TARGET)
 
 clean-local:
