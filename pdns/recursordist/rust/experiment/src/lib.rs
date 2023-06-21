@@ -32,10 +32,16 @@ FreeBSD 13.2    amd64                 # pkg install rust
 
 #[cxx::bridge]
 mod ffi {
+   pub struct RecursorConfig {
+       record_cache_size: u64,
+       pdns_distibutes_queries: bool,
+       a_string: String,
+   }
    extern "Rust" {
         type MultiBuf;
 
         fn next_chunk(buf: &mut MultiBuf) -> &[u8];
+        fn get_config() -> RecursorConfig; 
     }
 
     unsafe extern "C++" {
@@ -44,7 +50,7 @@ mod ffi {
         type BlobstoreClient;
 
         fn new_blobstore_client() -> UniquePtr<BlobstoreClient>;
-        fn put(&self, parts: &mut MultiBuf) -> u64;
+        fn put(self: &BlobstoreClient, parts: &mut MultiBuf) -> u64;
     }
 }
 
@@ -62,3 +68,13 @@ pub fn next_chunk(buf: &mut MultiBuf) -> &[u8] {
     buf.pos += 1;
     next.map_or(&[], Vec::as_slice)
 }
+
+fn get_config() -> crate::ffi::RecursorConfig {
+  crate::ffi::RecursorConfig{
+    record_cache_size: 10000,
+    pdns_distibutes_queries: false,
+    a_string: "Hello!".to_string(),
+  }
+}
+
+

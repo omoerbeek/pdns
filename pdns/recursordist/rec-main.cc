@@ -3115,6 +3115,8 @@ static pair<int, bool> doConfig(Logr::log_t startupLog, const string& configname
   return {0, false};
 }
 
+#include "rust/experiment/target/cxxbridge/experiment/src/lib.rs.h"
+
 static void rustTest()
 {
   rustHello();
@@ -3124,6 +3126,11 @@ static void rustTest()
   string rustStr = "foo";
   rustString(rustStr.data());
   assert(rustStr == "goo");
+  auto config = get_config();
+
+  cerr << config.record_cache_size << endl;
+  cerr << config.pdns_distibutes_queries << endl;
+  cerr << std::string(config.a_string) << endl;
 }
 
 int main(int argc, char** argv)
