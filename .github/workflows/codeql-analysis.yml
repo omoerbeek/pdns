@@ -131,7 +131,7 @@ jobs:
       run: |
         cd pdns/recursordist
         autoreconf -vfi
-        ./configure --enable-unit-tests --enable-nod --enable-dnstap --enable-dns-over-tls CFLAGS='-O0' CXXFLAGS='-O0'
+        ./configure --enable-unit-tests --enable-nod --enable-dnstap CFLAGS='-O0' CXXFLAGS='-O0'
         make -j8 -C ext
         make htmlfiles.h
         make -j4 pdns_recursor rec_control

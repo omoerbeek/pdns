@@ -663,7 +663,7 @@ systemdsystemunit_DATA = \
 
 CLEANFILES += \
 	pdns-recursor.service \
-	pdns-recursor@.servie
+	pdns-recursor@.service
 
 endif
 
