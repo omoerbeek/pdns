@@ -3130,26 +3130,26 @@ static void rustTest()
   auto config = get_config_from_rust();
   cout << "Case 1" << endl;
   cout << config.record_cache.size << endl;
-  cout << config.pdns_distibutes_queries << endl;
+  cout << config.incoming.pdns_distibutes_queries << endl;
   cout << std::string(config.a_string) << endl;
   cout << std::string(config.dnssec.validation) << endl;
-  cout << config.dnssec.aggresive_cache_size << endl << "===" << endl;
+  cout << config.dnssec.aggressive_cache_size << endl << "===" << endl;
 
   auto config2 = get_config_from_rust2();
   cout << "Case 2" << endl;
   cout << config2.record_cache.size << endl;
-  cout << config2.pdns_distibutes_queries << endl;
+  cout << config2.incoming.pdns_distibutes_queries << endl;
   cout << std::string(config2.a_string) << endl;
   cout << std::string(config2.dnssec.validation) << endl;
-  cout << config2.dnssec.aggresive_cache_size << endl << "===" << endl;
+  cout << config2.dnssec.aggressive_cache_size << endl << "===" << endl;
 
   auto config3 = get_config_from_rust3();
   cout << "Case 3" << endl;
   cout << config3.record_cache.size << endl;
-  cout << config3.pdns_distibutes_queries << endl;
+  cout << config3.incoming.pdns_distibutes_queries << endl;
   cout << std::string(config3.a_string) << endl;
   cout << std::string(config3.dnssec.validation) << endl;
-  cout << config3.dnssec.aggresive_cache_size << endl << "===" << endl;
+  cout << config3.dnssec.aggressive_cache_size << endl << "===" << endl;
 }
 
 int main(int argc, char** argv)

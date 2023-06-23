@@ -1,3 +1,8 @@
+use std::{error::Error, fmt};
+use std::net::{SocketAddr};
+use std::net::{IpAddr};
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 #[no_mangle]
@@ -33,14 +38,47 @@ impl<const U: bool> Bool<U> {
     }
 }
 
+#[derive(Debug)]
+pub struct ValidationError {
+    //pub code: Cow<'static, str>,
+    pub code: String,
+}
+impl Error for ValidationError {}
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.code)
+    }
+}
+impl ValidationError {
+    //pub fn new(msg: &'static str) -> ValidationError {
+    //    ValidationError{ code: Cow::from(msg) }
+    //}
+    pub fn new(msg: String) -> ValidationError {
+        ValidationError{ code: msg }
+    }
+}
+
+pub trait Validate {
+    fn validate(&self) -> Result<(), ValidationError>;
+}
+
+static ALL: bool = false;
+
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    t == &T::default()
+    !ALL && t == &T::default()
 }
 
 #[cxx::bridge]
 mod ffi {
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    pub struct Incoming {
+        #[serde(default = "crate::Bool::<false>::v")]
+        pdns_distibutes_queries: bool,
+        #[serde(default = "crate::default_listen")]
+        listen: Vec<String>,
+    }
 
-    #[derive(Deserialize, Serialize, Debug)]
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
     pub struct RecordCache {
         #[serde(default = "crate::U64::<1000000>::v")]
         size: u64,
@@ -54,12 +92,12 @@ mod ffi {
     }
     #[derive(Deserialize, Serialize, Debug)]
     pub struct RecursorConfig {
-        #[serde(default)]
+        #[serde(default, skip_serializing_if = "crate::is_default")]
+        incoming: Incoming,
+        #[serde(default, skip_serializing_if = "crate::is_default")]
         record_cache: RecordCache,
         #[serde(default, skip_serializing_if = "crate::is_default")]
         dnssec: DNSSEC,
-        #[serde(default = "crate::Bool::<false>::v")]
-        pdns_distibutes_queries: bool,
         #[serde(default)]
         a_string: String,
     }
@@ -77,6 +115,10 @@ mod ffi {
 //    }
 //}
 
+pub fn default_listen() -> Vec<String> {
+    [ String::from("127.0.0.1"), String::from("::1") ].to_vec()
+}
+
 pub fn default_validation_mode() -> String {
     String::from("process")
 }
@@ -84,6 +126,27 @@ pub fn default_validation_mode() -> String {
 //pub fn default_aggressive_cache_size() -> u64 {
 //    101
 //}
+
+impl Default for ffi::Incoming {
+    fn default() -> Self {
+        let deserialized: ffi::Incoming = serde_yaml::from_str("").unwrap();
+        deserialized
+    }
+}
+
+impl Validate for ffi::Incoming {
+    fn validate(&self) -> Result<(), ValidationError> {
+        for val in &self.listen {
+            let sa = SocketAddr::from_str(&val);
+            let ip = IpAddr::from_str(&val);
+            if !sa.map_or(false, |i| i.is_ipv4() || i.is_ipv6()) && !ip.map_or(false, |i| i.is_ipv4() || i.is_ipv6()) {
+                let msg = format!("value `{}' is not an IP or IP:port combination", val);
+                return Err(ValidationError::new(msg));
+            }
+        }
+        Ok(())
+    }
+}
 
 impl Default for ffi::DNSSEC {
     fn default() -> Self {
@@ -113,7 +176,10 @@ fn get_config_from_rust() -> ffi::RecursorConfig {
             aggressive_cache_size: 99,
             validation: String::from("process"),
         },
-        pdns_distibutes_queries: false,
+        incoming: ffi::Incoming{
+            pdns_distibutes_queries: false,
+            listen: [String::from("127.0.0.1"), String::from("[::2]:53")].to_vec(),
+        },
         a_string: String::from("Hello via literal struct!"),
     };
     let serialized = serde_json::to_string(&config).unwrap();
@@ -122,6 +188,7 @@ fn get_config_from_rust() -> ffi::RecursorConfig {
     println!("JSON deserialzed {:?}\n===", deserialized);
     let serialized = serde_yaml::to_string(&config).unwrap();
     println!("YAML {}\n===", serialized);
+    config.incoming.validate().unwrap();
     config
 }
 
@@ -139,7 +206,7 @@ fn get_config_from_rust2() -> ffi::RecursorConfig {
 fn get_config_from_rust3() -> ffi::RecursorConfig {
     let serialized = r###"
   record_cache:
-    size: 1003
+    size: 10000
   dnssec:
     validation: validate
   pdns_distibutes_queries: false
