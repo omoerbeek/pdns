@@ -25,7 +25,6 @@ Build-Depends: debhelper (>= 10),
                pkg-config,
                protobuf-compiler,
                ragel,
-               rustc,
                systemd
 Homepage: https://www.powerdns.com/
 Rules-Requires-Root: no
