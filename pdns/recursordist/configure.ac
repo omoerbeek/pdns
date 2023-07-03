@@ -195,7 +195,8 @@ AC_CONFIG_FILES([Makefile
 	ext/json11/Makefile
 	ext/probds/Makefile
 	ext/yahttp/Makefile
-	ext/yahttp/yahttp/Makefile])
+	ext/yahttp/yahttp/Makefile
+        rust/experiment/Makefile])
 
 AC_OUTPUT
 

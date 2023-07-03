@@ -1,5 +1,6 @@
 JSON11_LIBS = $(top_srcdir)/ext/json11/libjson11.la
 PROBDS_LIBS = $(top_srcdir)/ext/probds/libprobds.la
+RUST_LIBS = $(top_srcdir)/rust/experiment/librusttest.a $(LIBDL)
 
 AM_CPPFLAGS = $(LUA_CFLAGS) $(YAHTTP_CFLAGS) $(BOOST_CPPFLAGS) $(LIBSODIUM_CFLAGS) $(NET_SNMP_CFLAGS) $(LIBCAP_CFLAGS) $(SANITIZER_FLAGS) -O3 -Wall -pthread -DSYSCONFDIR=\"${sysconfdir}\" $(SYSTEMD_CFLAGS)
 
@@ -44,7 +45,7 @@ CLEANFILES = htmlfiles.h \
 htmlfiles.h: incfiles html/* html/js/*
 	./incfiles > $@
 
-SUBDIRS=ext
+SUBDIRS=ext rust/experiment
 
 if LUA
 AM_CPPFLAGS +=$(LUA_CFLAGS)
@@ -75,8 +76,7 @@ EXTRA_DIST = \
 	test_libcrypto \
 	pdns-recursor.service.in \
 	RECURSOR-MIB.txt \
-	builder-support/gen-version \
-	rust/experiment/src/rusttest.rs
+	builder-support/gen-version
 
 dist-hook:
 	for file in $$(find $(distdir)/docs -type l); do \
@@ -239,8 +239,7 @@ pdns_recursor_LDADD = \
 	$(BOOST_SYSTEM_LIBS) \
 	$(PROBDS_LIBS) \
 	$(LIBCAP_LIBS) \
-	rust/experiment/target/release/librusttest.a \
-	$(LIBDL)
+	$(RUST_LIBS)
 
 pdns_recursor_LDFLAGS = $(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS) $(BOOST_CONTEXT_LDFLAGS) \
@@ -388,8 +387,7 @@ testrunner_LDADD = \
 	$(BOOST_SYSTEM_LIBS) \
 	$(PROBDS_LIBS) \
 	$(LIBCAP_LIBS) \
-	rust/experiment/target/release/librusttest.a \
-	$(LIBDL)
+	$(RUST_LIBS)
 
 if NOD_ENABLED
 testrunner_SOURCES +=   nod.hh nod.cc \
@@ -671,11 +669,4 @@ if !HAVE_LUA_HPP
 include lua_hpp.mk
 endif
 
-RUSTC ?= rustc
-
-rust/experiment/target/release/librusttest.a: rust/experiment/src/lib.rs rust/experiment/target/cxxbridge/experiment/src/lib.rs.h
-	cd rust/experiment && cargo build --release $(RUST_TARGET)
-
-clean-local:
-	rm -rf rust/experiment/target
 

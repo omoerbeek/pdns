@@ -41,7 +41,7 @@
 #include "dnsseckeeper.hh"
 
 #include "rusttest.hh"
-#include "rust/experiment/target/cxxbridge/experiment/src/lib.rs.h"
+#include "rust/experiment/lib.rs.h"
 
 
 #ifdef NOD_ENABLED
