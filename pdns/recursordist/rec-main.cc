@@ -43,7 +43,6 @@
 #include "rusttest.hh"
 #include "rust/experiment/lib.rs.h"
 
-
 #ifdef NOD_ENABLED
 #include "nod.hh"
 #endif /* NOD_ENABLED */
@@ -3119,48 +3118,48 @@ static pair<int, bool> doConfig(Logr::log_t startupLog, const string& configname
 }
 
 using Variant = std::variant<
-  bool,                         // 0
-  uint64_t,                     // 1
-  double,                       // 2
-  rust::String,                 // 3
-  rust::Vec<rust::String>       // 4
+  bool, // 0
+  uint64_t, // 1
+  double, // 2
+  rust::String, // 3
+  rust::Vec<rust::String> // 4
   >;
 
 // A mapping of an old style config name to specific field of the relevant section
-struct Mapping {
+struct Mapping
+{
   const string old_name;
-  const std::function<void(RecursorConfig &config, const Variant& val)> func;
-  uint8_t typeIndex;            // index number of Variant's list
+  const std::function<void(RecursorConfig& config, const Variant& val)> func;
+  uint8_t typeIndex; // index number of Variant's list
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define FIELD_SETTER_bool(name) [](RecursorConfig& config, const Variant &val) { config.name = std::get<0>(val); }, 0
+#define FIELD_SETTER_bool(name) [](RecursorConfig& config, const Variant& val) { config.name = std::get<0>(val); }, 0
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define FIELD_SETTER_uint64_t(name) [](RecursorConfig& config, const Variant &val) { config.name = std::get<1>(val); }, 1
+#define FIELD_SETTER_uint64_t(name) [](RecursorConfig& config, const Variant& val) { config.name = std::get<1>(val); }, 1
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define FIELD_SETTER_double(name) [](RecursorConfig& config, const Variant &val) { config.name = std::get<2>(val); }, 2
+#define FIELD_SETTER_double(name) [](RecursorConfig& config, const Variant& val) { config.name = std::get<2>(val); }, 2
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define FIELD_SETTER_string(name) [](RecursorConfig& config, const Variant &val) { config.name = std::get<3>(val); }, 3
+#define FIELD_SETTER_string(name) [](RecursorConfig& config, const Variant& val) { config.name = std::get<3>(val); }, 3
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define FIELD_SETTER_stringvec(name) [](RecursorConfig& config, const Variant &val) { config.name = std::get<4>(val); }, 4
+#define FIELD_SETTER_stringvec(name) [](RecursorConfig& config, const Variant& val) { config.name = std::get<4>(val); }, 4
 
 static const vector<Mapping> s_oldStyleToNewStyleConfigMap = {
-  { "local-address", FIELD_SETTER_stringvec(incoming.listen) },
-  { "pdns-distributes-queries", FIELD_SETTER_bool(incoming.pdns_distributes_queries) },
-  { "reuseport", FIELD_SETTER_bool(incoming.reuse_port) },
-  { "distribution-load-factor", FIELD_SETTER_double(incoming.load_factor) },
+  {"local-address", FIELD_SETTER_stringvec(incoming.listen)},
+  {"pdns-distributes-queries", FIELD_SETTER_bool(incoming.pdns_distributes_queries)},
+  {"reuseport", FIELD_SETTER_bool(incoming.reuse_port)},
+  {"distribution-load-factor", FIELD_SETTER_double(incoming.load_factor)},
 
-  { "max-cache-entries", FIELD_SETTER_uint64_t(record_cache.size) },
+  {"max-cache-entries", FIELD_SETTER_uint64_t(record_cache.size)},
 
-  { "aggressive-nsec-cache-size", FIELD_SETTER_uint64_t(dnssec.aggressive_cache_size) },
-  { "dnssec", FIELD_SETTER_string(dnssec.validation) }
-};
+  {"aggressive-nsec-cache-size", FIELD_SETTER_uint64_t(dnssec.aggressive_cache_size)},
+  {"dnssec", FIELD_SETTER_string(dnssec.validation)}};
 
 static void processOldConfig(RecursorConfig& config)
 {
   cerr << "Old config has " << arg().list().size() << " names" << endl;
   cerr << "Old to new config map " << s_oldStyleToNewStyleConfigMap.size() << " names" << endl;
-  for (const auto& [name, func, typeIndex]: s_oldStyleToNewStyleConfigMap) {
+  for (const auto& [name, func, typeIndex] : s_oldStyleToNewStyleConfigMap) {
     switch (typeIndex) {
     case 0:
       func(config, arg().mustDo(name));
@@ -3195,31 +3194,34 @@ static void rustTest()
   rustHello();
   int32_t rustTest = 0;
   rustIncrement(&rustTest);
-  assert(rustTest == 1);
+  assert(rustTest == 1); // NOLINT
   string rustStr = "foo";
   rustString(rustStr.data());
-  assert(rustStr == "goo");
+  assert(rustStr == "goo"); // NOLINT
 
   auto config = get_config_from_rust();
   cout << "Case 1" << endl;
   cout << config.record_cache.size << endl;
   cout << config.incoming.pdns_distributes_queries << endl;
   cout << std::string(config.dnssec.validation) << endl;
-  cout << config.dnssec.aggressive_cache_size << endl << "===" << endl;
+  cout << config.dnssec.aggressive_cache_size << endl
+       << "===" << endl;
 
   auto config2 = get_config_from_rust2();
   cout << "Case 2" << endl;
   cout << config2.record_cache.size << endl;
   cout << config2.incoming.pdns_distributes_queries << endl;
   cout << std::string(config2.dnssec.validation) << endl;
-  cout << config2.dnssec.aggressive_cache_size << endl << "===" << endl;
+  cout << config2.dnssec.aggressive_cache_size << endl
+       << "===" << endl;
 
   auto config3 = get_config_from_rust3();
   cout << "Case 3" << endl;
   cout << config3.record_cache.size << endl;
   cout << config3.incoming.pdns_distributes_queries << endl;
   cout << std::string(config3.dnssec.validation) << endl;
-  cout << config3.dnssec.aggressive_cache_size << endl << "===" << endl;
+  cout << config3.dnssec.aggressive_cache_size << endl
+       << "===" << endl;
 
   // Test to see how conversion of a an old-style config works
   RecursorConfig config4;
@@ -3333,7 +3335,6 @@ int main(int argc, char** argv)
     ::arg().parse(argc, argv);
 
     rustTest();
-
 
     g_quiet = ::arg().mustDo("quiet");
     s_logUrgency = (Logger::Urgency)::arg().asNum("loglevel");

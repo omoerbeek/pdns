@@ -98,6 +98,7 @@ mod recconfig {
         fn get_config_from_rust2() -> RecursorConfig;
         fn get_config_from_rust3() -> RecursorConfig;
         fn pass_config_to_rust(config: &RecursorConfig);
+        fn parse_yaml_config_in_rust(str: &String) -> RecursorConfig;
     }
 }
 
@@ -282,4 +283,9 @@ fn get_config_from_rust3() -> recconfig::RecursorConfig {
 fn pass_config_to_rust(config: &recconfig::RecursorConfig) {
     let serialized = serde_yaml::to_string(&config).unwrap();
     println!("YAML received from C++\n{}\n===", serialized);
+}
+
+fn parse_yaml_config_in_rust(str: &String) -> recconfig::RecursorConfig {
+    let deserialized: recconfig::RecursorConfig = serde_yaml::from_str(str.as_str()).unwrap();
+    deserialized
 }
