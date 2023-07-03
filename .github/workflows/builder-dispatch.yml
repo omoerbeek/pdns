@@ -37,7 +37,7 @@ on:
 
 jobs:
   call-build-packages:
-    uses: PowerDNS/pdns/.github/workflows/build-packages.yml@master
+    uses: omoerbeek/pdns/.github/workflows/build-packages.yml@rec-rusttest
     with:
       product: ${{ github.event.inputs.product }}
       os: ${{ github.event.inputs.os }}
