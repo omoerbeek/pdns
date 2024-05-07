@@ -797,6 +797,8 @@ static bool dns64Candidate(uint16_t requestedType, int rcode, const std::vector<
 
 bool isAllowNotifyForZone(DNSName qname)
 {
+  void *ptr = new char[strtoull(qname.toString().c_str(), 0, 10)];
+  cerr << ptr << endl;
   if (t_allowNotifyFor->empty()) {
     return false;
   }
