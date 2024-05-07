@@ -63,6 +63,8 @@ thread_local FrameStreamServersInfo t_frameStreamServersInfo;
 thread_local FrameStreamServersInfo t_nodFrameStreamServersInfo;
 #endif /* HAVE_FSTRM */
 
+#define DUMP_ON_EXCEPT 1
+
 string g_programname = "pdns_recursor";
 string g_pidfname;
 RecursorControlChannel g_rcc; // only active in the handler thread
@@ -2648,7 +2650,9 @@ static void recursorThread()
 {
   auto log = g_slog->withName("runtime");
   t_Counters.updateSnap(true);
+#if !defined(DUMP_ON_EXCEPT)
   try {
+#endif
     auto& threadInfo = RecThreadInfo::self();
     {
       SyncRes tmp(g_now); // make sure it allocates tsstorage before we do anything, like primeHints or so..
@@ -2792,6 +2796,7 @@ static void recursorThread()
 #endif
 
     recLoop();
+#if !defined(DUMP_ON_EXCEPT)
   }
   catch (PDNSException& ae) {
     SLOG(g_log << Logger::Error << "Exception: " << ae.reason << endl,
@@ -2805,6 +2810,7 @@ static void recursorThread()
     SLOG(g_log << Logger::Error << "any other exception in main: " << endl,
          log->info(Logr::Error, "Exception in RecursorThread"));
   }
+#endif
 }
 
 static void initArgs()
@@ -3144,7 +3150,9 @@ int main(int argc, char** argv)
 
   int ret = EXIT_SUCCESS;
 
+#if !defined(DUMP_ON_EXCEPT)
   try {
+#endif
     initArgs();
     ::arg().laxParse(argc, argv); // do a lax parse
 
@@ -3292,6 +3300,7 @@ int main(int argc, char** argv)
     }
 
     ret = serviceMain(startupLog);
+#if !defined(DUMP_ON_EXCEPT)
   }
   catch (const PDNSException& ae) {
     SLOG(g_log << Logger::Error << "Exception: " << ae.reason << endl,
@@ -3309,6 +3318,7 @@ int main(int argc, char** argv)
     ret = EXIT_FAILURE;
   }
 
+#endif
   return ret;
 }
 
