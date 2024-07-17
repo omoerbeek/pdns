@@ -159,7 +159,10 @@ A forward zone is defined as:
   recurse: Boolean, default false
   allow_notify:  Boolean, default false
 
-An example of a ``forward_zones`` entry, which consists of a sequence of forward zone entries:
+.. note::
+  The ``recurse`` and ``allow_notify`` fields are only processed for entries read from a :ref:`setting-yaml-recursor.forward_zones_file` file.
+
+An example of ``forward_zones_file`` content, which consists of a sequence of forward zone entries:
 
 .. code-block:: yaml
 

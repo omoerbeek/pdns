@@ -1053,6 +1053,9 @@ Queries for zones listed here will be forwarded to the IP address listed. i.e.
         forwarders:
         - 2001:DB8::BEEF:5
 
+Note that while the `Forward Zone`_ structure has ``recurse`` and ``notify_allowed`` fields, there are only processed
+when the sequence is read from a file using :ref:`setting-yaml-recursor.forward_zones_file`.
+
 Multiple IP addresses can be specified and port numbers other than 53 can be configured:
 
 .. code-block:: yaml
