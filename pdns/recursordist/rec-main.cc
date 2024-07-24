@@ -2907,6 +2907,9 @@ static void recursorThread()
       checkFrameStreamExport(luaconfsLocal, luaconfsLocal->frameStreamExportConfig, t_frameStreamServersInfo);
       checkFrameStreamExport(luaconfsLocal, luaconfsLocal->nodFrameStreamExportConfig, t_nodFrameStreamServersInfo);
 #endif
+      for (const auto& rpz : luaconfsLocal->rpzs) {
+        t_Counters.at(rec::PolicyNameHits::policyName).counts[rpz.polName] = 0;
+      }
     }
 
     t_fdm = unique_ptr<FDMultiplexer>(getMultiplexer(log));
@@ -3443,7 +3446,7 @@ static void activateRPZFile(const RPZTrackerParams& params, LuaConfigItems& lci,
 {
   auto log = lci.d_slog->withValues("file", Logging::Loggable(params.name));
 
-  zone->setName(params.polName);
+  zone->setName(params.polName.empty() ? "rpzFile" : params.polName);
   try {
     SLOG(g_log << Logger::Warning << "Loading RPZ from file '" << params.name << "'" << endl,
          log->info(Logr::Info, "Loading RPZ from file"));
