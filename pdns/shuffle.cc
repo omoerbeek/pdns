@@ -151,7 +151,7 @@ unsigned int pdns::dedup(vector<DNSRecord>& rrs)
 
   // If we have a larger vector, first check if we actually have duplicates.
   // We assume the most common case is: no
-  std::unordered_set<std::string> seen;
+  std::set<std::tuple<DNSName,QType,std::string>> seen;
   std::vector<bool> dups(rrs.size(), false);
 
   unsigned int counter = 0;
@@ -159,7 +159,7 @@ unsigned int pdns::dedup(vector<DNSRecord>& rrs)
 
   for (const auto& rec : rrs) {
     // This ignores class, ttl and place by using constants for those
-    if (!seen.emplace(rec.getContent()->serialize(rec.d_name, true, true)).second) {
+    if (!seen.emplace(rec.d_name.makeLowerCase(), rec.d_type, rec.getContent()->serialize(rec.d_name, true, false)).second) {
       dups[counter] = true;
       numDups++;
     }

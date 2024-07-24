@@ -39,17 +39,18 @@ BOOST_AUTO_TEST_CASE(test_simple)
   std::vector<DNSRecord> list;
   auto* address = &list;
   addRecordToList(list, DNSName("foo"), QType::A, "1.2.3.4");
+  addRecordToList(list, DNSName("foo2"), QType::A, "1.2.3.4");
   auto dups = pdns::dedup(list);
   BOOST_CHECK_EQUAL(dups, 0U);
-  BOOST_CHECK_EQUAL(list.size(), 1U);
+  BOOST_CHECK_EQUAL(list.size(), 2U);
   addRecordToList(list, DNSName("foo"), QType::A, "1.2.3.4");
   dups = pdns::dedup(list);
   BOOST_CHECK_EQUAL(dups, 1U);
-  BOOST_CHECK_EQUAL(list.size(), 1U);
+  BOOST_CHECK_EQUAL(list.size(), 2U);
   addRecordToList(list, DNSName("Foo"), QType::A, "1.2.3.4");
   dups = pdns::dedup(list);
   BOOST_CHECK_EQUAL(dups, 1U);
-  BOOST_CHECK_EQUAL(list.size(), 1U);
+  BOOST_CHECK_EQUAL(list.size(), 2U);
   BOOST_CHECK_EQUAL(address, &list);
 }
 
