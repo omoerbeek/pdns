@@ -2130,4 +2130,182 @@ BOOST_AUTO_TEST_CASE(test_nodata_out_of_order)
   BOOST_CHECK(!SyncRes::answerIsNOData(QType::A, RCode::NoError, vec));
 }
 
+BOOST_AUTO_TEST_CASE(test_many_names_answernames_cached)
+{
+  std::unique_ptr<SyncRes> resolver;
+  initSR(resolver);
+  // We use one shard, otherwise the pruning might clear the "wrong" shard
+  g_recCache = std::make_unique<MemRecursorCache>(1);
+
+  primeHints();
+  resolver->setQNameMinimization();
+
+  const DNSName target("name.powerdns.com.");
+  const DNSName target2("name2.powerdns.com.");
+
+  resolver->setAsyncCallback([&](const ComboAddress& address, const DNSName& domain, int /* type */, bool /* doTCP */, bool /* sendRDQuery */, int /* EDNS0Level */, struct timeval* /* now */, boost::optional<Netmask>& /* srcmask */, const ResolveContext& /* context */, LWResult* res, bool* /* chained */) {
+    if (isRootServer(address)) {
+
+      setLWResult(res, 0, false, false, true);
+      addRecordToLW(res, domain, QType::NS, "a.gtld-servers.net.", DNSResourceRecord::AUTHORITY, 172800);
+      addRecordToLW(res, "a.gtld-servers.net.", QType::A, "192.0.2.1", DNSResourceRecord::ADDITIONAL, 3600);
+      return LWResult::Result::Success;
+    }
+    if (address == ComboAddress("192.0.2.1:53") && domain == target) {
+
+      setLWResult(res, 0, true, false, false);
+      for (int i = 0; i < 1000; i++) {
+        addRecordToLW(res, domain, QType::A, "1.2.3.4");
+      }
+      return LWResult::Result::Success;
+    }
+    if (address == ComboAddress("192.0.2.1:53") && domain == target2) {
+      setLWResult(res, 0, true, false, false);
+      addRecordToLW(res, target2, QType::A, "1.2.3.5");
+      return LWResult::Result::Success;
+    }
+
+    return LWResult::Result::Timeout;
+  });
+
+  vector<DNSRecord> ret;
+
+  BOOST_CHECK_LT(g_recCache->size(), 100U);
+
+  // target2 is a regular small answer, should not be evicted before the worthless answers
+  int res = resolver->beginResolve(target2, QType(QType::A), QClass::IN, ret);
+  BOOST_CHECK_EQUAL(res, RCode::NoError);
+  BOOST_CHECK_EQUAL(ret.size(), 1U);
+
+  // target gets a huge number of answer records, so they get into the cache marked as "probably worthless"
+  ret.clear();
+  res = resolver->beginResolve(target, QType(QType::A), QClass::IN, ret);
+  BOOST_CHECK_EQUAL(res, RCode::NoError);
+  BOOST_CHECK_EQUAL(ret.size(), 1000U);
+
+  // Cache size still should be reasonably small
+  auto cacheSize = g_recCache->size();
+  BOOST_CHECK_LE(cacheSize, 100U);
+  cacheSize--;
+  g_recCache->doPrune(time(nullptr), cacheSize);
+  BOOST_CHECK_LE(g_recCache->size(), cacheSize); // Did the prune work?
+
+  // We expect target to be evicted as it should have been marked as potentially worthless and has
+  // not been queried after cache insertion
+  auto present = g_recCache->get(time(nullptr), target, QType::A, MemRecursorCache::None, &ret, ComboAddress());
+  BOOST_CHECK_LE(present, 0);
+
+  // target2 should still be there, as the worthless entry should have been evicted only
+  present = g_recCache->get(time(nullptr), target2, QType::A, MemRecursorCache::None, &ret, ComboAddress());
+  BOOST_CHECK_GT(present, 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_many_additional_names_cached)
+{
+  std::unique_ptr<SyncRes> resolver;
+  initSR(resolver);
+
+  primeHints();
+
+  const unsigned int numNS = 1000;
+
+  DNSName target("www.powerdns.com.");
+
+  resolver->setAsyncCallback([&](const ComboAddress& address, const DNSName& domain, int type, bool /* doTCP */, bool /* sendRDQuery */, int /* EDNS0Level */, struct timeval* /* now */, boost::optional<Netmask>& /* srcmask */, const ResolveContext& /* context */, LWResult* res, bool* /* chained */) {
+    if (isRootServer(address)) {
+      setLWResult(res, 0, false, false, true);
+      for (unsigned int i = 0; i < numNS; i++) {
+        addRecordToLW(res, "powerdns.com.", QType::NS, "pdns-public-ns" + std::to_string(i) + ".powerdns.com.", DNSResourceRecord::AUTHORITY, 172800);
+      }
+      for (unsigned int i = 0; i < numNS; i++) {
+        addRecordToLW(res, "pdns-public-ns" + std::to_string(i) + ".powerdns.com.", QType::A, "192.0.2.2", DNSResourceRecord::ADDITIONAL, 172800);
+        addRecordToLW(res, "pdns-public-ns" + std::to_string(i) + ".powerdns.com.", QType::AAAA, "2001:DB8::2", DNSResourceRecord::ADDITIONAL, 172800);
+      }
+      return LWResult::Result::Success;
+    }
+    if (address == ComboAddress("192.0.2.2:53") || address == ComboAddress("2001:DB8::2")) {
+      setLWResult(res, 0, true, false, true);
+      if (domain == target) {
+        addRecordToLW(res, domain, QType::A, "192.0.2.1");
+        return LWResult::Result::Success;
+      }
+      if (type == QType::A) {
+        setLWResult(res, 0, true, false, true);
+        addRecordToLW(res, domain, QType::A, "192.0.2.2");
+        setLWResult(res, 0, true, false, true);
+        return LWResult::Result::Success;
+      }
+      if (type == QType::AAAA) {
+        addRecordToLW(res, domain, QType::AAAA, "2001:DB8::2");
+        setLWResult(res, 0, true, false, true);
+        return LWResult::Result::Success;
+      }
+    }
+    return LWResult::Result::Timeout;
+  });
+
+  BOOST_CHECK_LT(g_recCache->size(), 100U);
+
+  vector<DNSRecord> ret;
+  int res = resolver->beginResolve(target, QType(QType::A), QClass::IN, ret);
+  BOOST_CHECK_EQUAL(res, RCode::NoError);
+  BOOST_CHECK_EQUAL(ret.size(), 1U);
+  BOOST_CHECK_LT(g_recCache->size(), 100U); // We don't want to see the cache having grown too much
+
+  // size of cache entry (the value part) for powerdns.com/NS is still large, maybe we want it not not be that large
+  // So if you change that adapt the test below
+  ret.clear();
+  auto present = g_recCache->get(time(nullptr), DNSName("powerdns.com"), QType::NS, MemRecursorCache::None, &ret, ComboAddress());
+  BOOST_CHECK_GT(present, 0);
+  BOOST_CHECK_EQUAL(ret.size(), numNS);
+}
+
+BOOST_AUTO_TEST_CASE(test_long_cname_chain_in_bailiwick)
+{
+  // Test we not only ServFail on long CNAME chains but also do not fill the cache with garbage
+  std::unique_ptr<SyncRes> resolver;
+  initSR(resolver);
+
+  primeHints();
+
+  DNSName target("www.powerdns.com.");
+
+  resolver->setAsyncCallback([&](const ComboAddress& address, const DNSName& domain, int /* type */, bool /* doTCP */, bool /* sendRDQuery */, int /* EDNS0Level */, struct timeval* /* now */, boost::optional<Netmask>& /* srcmask */, const ResolveContext& /* context */, LWResult* res, bool* /* chained */) {
+    if (isRootServer(address)) {
+      setLWResult(res, 0, false, false, true);
+      addRecordToLW(res, domain, QType::NS, "a.gtld-servers.net.", DNSResourceRecord::AUTHORITY, 172800);
+      addRecordToLW(res, "a.gtld-servers.net.", QType::A, "192.0.2.1", DNSResourceRecord::ADDITIONAL, 3600);
+      return LWResult::Result::Success;
+    }
+    if (address == ComboAddress("192.0.2.1:53")) {
+      setLWResult(res, 0, true, false, false);
+      DNSName current(target);
+      int label = 0;
+      current = domain;
+      if (domain != target) {
+        label = pdns::checked_stoi<int>(domain.getRawLabels()[0]) + 1;
+      }
+      for (; label < 100; label++) {
+        DNSName next(target);
+        next.prependRawLabel(std::to_string(label));
+        addRecordToLW(res, current, QType::CNAME, next.toString());
+        current = next;
+      }
+      addRecordToLW(res, current, QType::A, "1.2.3.4");
+      return LWResult::Result::Success;
+    }
+
+    return LWResult::Result::Timeout;
+  });
+
+  const size_t cacheSize = g_recCache->size();
+
+  vector<DNSRecord> ret;
+  int res = resolver->beginResolve(target, QType(QType::A), QClass::IN, ret);
+  BOOST_CHECK_EQUAL(res, RCode::ServFail);
+  BOOST_CHECK_EQUAL(ret.size(), SyncRes::s_max_CNAMES_followed + 1);
+
+  BOOST_CHECK_EQUAL(g_recCache->size(), cacheSize + SyncRes::s_max_CNAMES_followed + 1 + 3); // answer size plus delegaton info, not all 100 CNAMEs
+}
+
 BOOST_AUTO_TEST_SUITE_END()

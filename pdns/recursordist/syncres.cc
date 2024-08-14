@@ -481,6 +481,8 @@ unsigned int SyncRes::s_nonresolvingnsthrottletime;
 unsigned int SyncRes::s_ecscachelimitttl;
 unsigned int SyncRes::s_maxvalidationsperq;
 unsigned int SyncRes::s_maxnsec3iterationsperq;
+unsigned int SyncRes::s_many_rrsets_threshold = 40;
+unsigned int SyncRes::s_big_rrset_threshold = 40;
 pdns::stat_t SyncRes::s_ecsqueries;
 pdns::stat_t SyncRes::s_ecsresponses;
 std::map<uint8_t, pdns::stat_t> SyncRes::s_ecsResponsesBySubnetSize4;
@@ -4636,6 +4638,9 @@ RCode::rcodes_ SyncRes::updateCacheFromRecords(unsigned int depth, const string&
     }
   }
 
+  // e.g. 13 NS names each having A + AAAA additional
+  const bool manyCacheEntries = tcache.size() >= s_many_rrsets_threshold;
+
   for (auto tCacheEntry = tcache.begin(); tCacheEntry != tcache.end(); ++tCacheEntry) {
 
     if (tCacheEntry->second.records.empty()) { // this happens when we did store signatures, but passed on the records themselves
@@ -4798,7 +4803,10 @@ RCode::rcodes_ SyncRes::updateCacheFromRecords(unsigned int depth, const string&
             thisRRNeedsWildcardProof = true;
           }
         }
-        g_recCache->replace(d_now.tv_sec, tCacheEntry->first.name, tCacheEntry->first.type, tCacheEntry->second.records, tCacheEntry->second.signatures, thisRRNeedsWildcardProof ? authorityRecs : std::vector<std::shared_ptr<DNSRecord>>(), tCacheEntry->first.type == QType::DS ? true : isAA, auth, tCacheEntry->first.place == DNSResourceRecord::ANSWER ? ednsmask : boost::none, d_routingTag, recordState, remoteIP, d_refresh, tCacheEntry->second.d_ttl_time);
+
+        const bool manyRRSetsOrBigRRSet = manyCacheEntries || tCacheEntry->second.records.size() >= s_big_rrset_threshold;
+
+        g_recCache->replace(d_now.tv_sec, tCacheEntry->first.name, tCacheEntry->first.type, tCacheEntry->second.records, tCacheEntry->second.signatures, thisRRNeedsWildcardProof ? authorityRecs : std::vector<std::shared_ptr<DNSRecord>>(), tCacheEntry->first.type == QType::DS ? true : isAA, auth, tCacheEntry->first.place == DNSResourceRecord::ANSWER ? ednsmask : boost::none, d_routingTag, recordState, remoteIP, d_refresh, tCacheEntry->second.d_ttl_time, manyRRSetsOrBigRRSet);
 
         // Delete potential negcache entry. When a record recovers with serve-stale the negcache entry can cause the wrong entry to
         // be served, as negcache entries are checked before record cache entries

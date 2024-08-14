@@ -529,7 +529,7 @@ bool MemRecursorCache::CacheEntry::shouldReplace(time_t now, bool auth, vState s
   return true;
 }
 
-void MemRecursorCache::replace(time_t now, const DNSName& qname, const QType qtype, const vector<DNSRecord>& content, const vector<shared_ptr<const RRSIGRecordContent>>& signatures, const std::vector<std::shared_ptr<DNSRecord>>& authorityRecs, bool auth, const DNSName& authZone, boost::optional<Netmask> ednsmask, const OptTag& routingTag, vState state, boost::optional<ComboAddress> from, bool refresh, time_t ttl_time)
+void MemRecursorCache::replace(time_t now, const DNSName& qname, const QType qtype, const vector<DNSRecord>& content, const vector<shared_ptr<const RRSIGRecordContent>>& signatures, const std::vector<std::shared_ptr<DNSRecord>>& authorityRecs, bool auth, const DNSName& authZone, boost::optional<Netmask> ednsmask, const OptTag& routingTag, vState state, boost::optional<ComboAddress> from, bool refresh, time_t ttl_time, bool probablyUseless)
 {
   auto& shard = getMap(qname);
   auto lockedShard = shard.lock();
@@ -617,8 +617,21 @@ void MemRecursorCache::replace(time_t now, const DNSName& qname, const QType qty
     cacheEntry.d_records.push_back(record.getContent());
   }
 
-  if (!isNew) {
-    moveCacheItemToBack<SequencedTag>(lockedShard->d_map, stored);
+  if (probablyUseless) {
+    // It's probably a wortless entry, put it at the front of the eviction queue even if new. If the item
+    // actually gets used, it *will* be moved by get()
+    if (isNew) {
+      moveCacheItemToFront<SequencedTag>(lockedShard->d_map, stored);
+    }
+    // if not new, don't move it in the eviction queue, leave it where it is
+  }
+  else {
+    // We could consider not moving an existing item to the back of the eviction queue (like we do
+    // for useless items) and leave it where it currently is as the act of replacing does not
+    // indicate usefulness.
+    if (!isNew) {
+      moveCacheItemToBack<SequencedTag>(lockedShard->d_map, stored);
+    }
   }
   cacheEntry.d_submitted = false;
   cacheEntry.d_servedStale = 0;

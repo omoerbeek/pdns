@@ -542,6 +542,9 @@ public:
   static unsigned int s_ecscachelimitttl;
   static unsigned int s_maxvalidationsperq;
   static unsigned int s_maxnsec3iterationsperq;
+  static unsigned int s_many_rrsets_threshold;
+  static unsigned int s_big_rrset_threshold;
+
   static uint8_t s_ecsipv4limit;
   static uint8_t s_ecsipv6limit;
   static uint8_t s_ecsipv4cachelimit;
