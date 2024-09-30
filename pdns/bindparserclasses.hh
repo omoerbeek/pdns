@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 
 #include "namespaces.hh"
+#include "dnsrecords.hh"
 
 class BindDomainInfo 
 {
