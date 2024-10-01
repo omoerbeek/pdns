@@ -13,7 +13,7 @@ Provides: powerdns-recursor = %{version}-%{release}
 %if 0%{?rhel} < 8 && 0%{?amzn} != 2023
 BuildRequires: boost169-devel
 %else
-BuildRequires: boost-devel
+BuildRequires: boost1.78-devel
 %endif
 BuildRequires: libcap-devel
 BuildRequires: systemd
@@ -51,9 +51,9 @@ package if you need a dns cache for your network.
 %autosetup -p1 -n %{name}-%{getenv:BUILDER_VERSION}
 
 %build
-%if 0%{?rhel} < 8
-export CPPFLAGS=-I/usr/include/boost169
-export LDFLAGS=-L/usr/lib64/boost169
+%if 0%{?rhel} < 9
+export CPPFLAGS=-I/usr/include/boost1.78
+export LDFLAGS=-L/usr/lib64/boost1.78
 %endif
 
 %configure \
