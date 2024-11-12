@@ -30,6 +30,9 @@ use helpers::*;
 mod bridge;
 use bridge::*;
 
+mod web;
+use web::*;
+
 // Suppresses "Deserialize unused" warning
 #[derive(Deserialize, Serialize)]
 struct UnusedStruct {}

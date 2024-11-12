@@ -472,6 +472,7 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp)
   resp->setJsonBody(doc);
 }
 
+
 static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
 {
   DNSName canon = apiNameToDNSName(req->getvars["domain"]);
@@ -485,6 +486,18 @@ static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
   resp->setJsonBody(Json::object{
     {"count", res.record_count + res.packet_count + res.negative_record_count},
     {"result", "Flushed cache."}});
+}
+
+::rust::String pdns::rust::settings::rec::apiServerCacheFlush(::rust::Str domain, ::rust::Str type, ::rust::Str subtree)
+{
+  HttpRequest request;
+  request.getvars["domain"] = std::string(domain);
+  request.getvars["subtree"] = std::string(subtree);
+  request.getvars["type"] = std::string(type);
+  cerr << domain << endl;
+  HttpResponse response;
+  apiServerCacheFlush(&request, &response);
+  return response.body;
 }
 
 static void apiServerRPZStats(HttpRequest* /* req */, HttpResponse* resp)
@@ -566,6 +579,13 @@ static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
   resp->body = output.str();
   resp->headers["Content-Type"] = "text/plain";
   resp->status = 200;
+}
+
+::rust::String pdns::rust::settings::rec::prometheusMetrics()
+{
+  HttpResponse resp;
+  prometheusMetrics(nullptr, &resp);
+  return resp.body;
 }
 
 #include "htmlfiles.h"
