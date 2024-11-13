@@ -449,19 +449,22 @@ int main(int argc, char** argv)
   }
 }
 
-// HACK XXX
-
-::rust::String pdns::rust::settings::rec::prometheusMetrics()
+::rust::String pdns::rust::web::rec::prometheusMetrics()
 {
   return {};
 }
 
-::rust::String pdns::rust::settings::rec::apiServerZonesGET()
+::rust::String pdns::rust::web::rec::apiServerZonesGET()
 {
   return {};
 }
 
-::rust::String pdns::rust::settings::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::settings::rec::KeyValue>& /*unused*/)
+::rust::String pdns::rust::web::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::web::rec::KeyValue>& /*unused*/)
+{
+  return {};
+}
+
+::rust::String pdns::rust::web::rec::apiServerZonesPOST(::rust::Str /* unused str */)
 {
   return {};
 }

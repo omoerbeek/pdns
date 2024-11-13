@@ -45,6 +45,7 @@
 #include "tcpiohandler.hh"
 #include "rec-main.hh"
 #include "settings/cxxsettings.hh" // IWYU pragma: keep, needed by included generated file
+#include "settings/rust/web.rs.h"
 
 using json11::Json;
 
@@ -358,8 +359,8 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
 
   DNSName zonename = apiNameToDNSName(stringFromJson(document, "name"));
 
-  const auto& iter = SyncRes::t_sstorage.domainmap->find(zonename);
-  if (iter != SyncRes::t_sstorage.domainmap->cend()) {
+  const auto& iter = g_initialDomainMap->find(zonename);
+  if (iter != g_initialDomainMap->cend()) {
     throw ApiException("Zone already exists");
   }
 
@@ -367,6 +368,16 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
   reloadZoneConfiguration(g_yamlSettings);
   fillZone(zonename, resp);
   resp->status = 201;
+}
+
+::rust::String pdns::rust::web::rec::apiServerZonesPOST(::rust::Str str)
+{
+  HttpRequest req;
+  HttpResponse resp;
+
+  req.body = std::string(str);
+  apiServerZonesPOST(&req, &resp);
+  return resp.body;
 }
 
 static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
@@ -391,7 +402,7 @@ static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
   resp->setJsonBody(doc);
 }
 
-::rust::String pdns::rust::settings::rec::apiServerZonesGET()
+::rust::String pdns::rust::web::rec::apiServerZonesGET()
 {
   HttpResponse resp;
   apiServerZonesGET(nullptr, &resp);
@@ -495,7 +506,7 @@ static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
     {"result", "Flushed cache."}});
 }
 
-::rust::String pdns::rust::settings::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::settings::rec::KeyValue>& vec)
+::rust::String pdns::rust::web::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::web::rec::KeyValue>& vec)
 {
   HttpRequest request;
   for (const auto& [key, value] : vec) {
@@ -587,7 +598,7 @@ static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
   resp->status = 200;
 }
 
-::rust::String pdns::rust::settings::rec::prometheusMetrics()
+::rust::String pdns::rust::web::rec::prometheusMetrics()
 {
   HttpResponse resp;
   prometheusMetrics(nullptr, &resp);

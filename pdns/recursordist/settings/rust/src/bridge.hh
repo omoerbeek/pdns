@@ -28,8 +28,13 @@ namespace pdns::rust::settings::rec
 uint16_t qTypeStringToCode(::rust::Str str);
 bool isValidHostname(::rust::Str str);
 void setThreadName(::rust::Str str);
+}
+
+namespace pdns::rust::web::rec
+{
 ::rust::String prometheusMetrics();
 struct KeyValue;
 ::rust::String apiServerCacheFlush(const ::rust::Vec<KeyValue>& vec);
 ::rust::String apiServerZonesGET();
+  ::rust::String apiServerZonesPOST(::rust::Str reqbody);
 }

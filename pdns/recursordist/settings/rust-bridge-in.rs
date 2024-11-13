@@ -389,22 +389,10 @@ extern "Rust" {
     fn validate_negativetrustanchors(field: &str, vec: &Vec<NegativeTrustAnchor>) -> Result<()>;
     fn api_delete_zone(file: &str, zone: &str) -> Result<()>;
     fn api_delete_zones(file: &str) -> Result<()>;
-
-    fn serveweb(addreses: &Vec<String>) -> Result<()>;
-}
-
-struct KeyValue
-{
-    key: String,
-    value: String,
 }
 
 unsafe extern "C++" {
     include!("bridge.hh");
     fn qTypeStringToCode(name: &str) -> u16;
     fn isValidHostname(name: &str) -> bool;
-
-    fn prometheusMetrics() -> String;
-    fn apiServerCacheFlush(vec: &Vec<KeyValue>) -> String;
-    fn apiServerZonesGET() -> String;
 }

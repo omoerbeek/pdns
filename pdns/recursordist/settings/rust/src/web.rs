@@ -10,7 +10,6 @@ use tokio::net::TcpListener;
 use tokio::runtime::Builder;
 use tokio::task::JoinSet;
 
-use crate::recsettings::{*};
 use std::io::ErrorKind;
 use std::str::FromStr;
 
@@ -29,7 +28,7 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
 async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/metrics") => {
-            let body = prometheusMetrics();
+            let body = rustweb::prometheusMetrics();
             let resp = Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "text/plain")
@@ -37,14 +36,14 @@ async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
             Ok(resp)
         }
         (&Method::PUT, "/api/v1/servers/localhost/cache/flush") => {
-            let mut vec: Vec<KeyValue> = vec![];
+            let mut vec: Vec<rustweb::KeyValue> = vec![];
             if let Some(query) = req.uri().query() {
                 for (k, v) in form_urlencoded::parse(query.as_bytes()) {
-                    let kv = KeyValue{key: k.to_string(), value: v.to_string()};
+                    let kv = rustweb::KeyValue{key: k.to_string(), value: v.to_string()};
                     vec.push(kv);
                 }
             }
-            let body = apiServerCacheFlush(&vec);
+            let body = rustweb::apiServerCacheFlush(&vec);
             let resp = Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "application/json")
@@ -52,7 +51,19 @@ async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
             Ok(resp)
         }
         (&Method::GET, "/api/v1/servers/localhost/zones") => {
-            let body = apiServerZonesGET();
+            let body = rustweb::apiServerZonesGET();
+            let resp = Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(full(body))?;
+            Ok(resp)
+        }
+        (&Method::POST, "/api/v1/servers/localhost/zones") => {
+            let reqbody = req.collect().await?.to_bytes();
+            let v: Vec<u8> = reqbody.to_vec();
+            let vstr = std::str::from_utf8(&v);
+            let s: &str = vstr.unwrap();
+            let body = rustweb::apiServerZonesPOST(s);
             let resp = Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "application/json")
@@ -142,3 +153,28 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cxx::bridge(namespace = "pdns::rust::web::rec")]
+/*
+ * Functions callable from C++
+ */
+mod rustweb {
+    
+    extern "Rust" {
+        fn serveweb(addreses: &Vec<String>) -> Result<()>;
+    }
+    
+    struct KeyValue
+    {
+        key: String,
+        value: String,
+    }
+    
+    unsafe extern "C++" {
+        include!("bridge.hh");
+        fn prometheusMetrics() -> String;
+        fn apiServerCacheFlush(vec: &Vec<KeyValue>) -> String;
+        fn apiServerZonesGET() -> String;
+        fn apiServerZonesPOST(body: &str) -> String;
+    }
+    
+}

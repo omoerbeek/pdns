@@ -583,3 +583,23 @@ LWResult::Result basicRecordsForQnameMinimization(LWResult* res, const DNSName& 
   }
   return LWResult::Result::Timeout;
 }
+
+::rust::String pdns::rust::web::rec::prometheusMetrics()
+{
+  return {};
+}
+
+::rust::String pdns::rust::web::rec::apiServerZonesGET()
+{
+  return {};
+}
+
+::rust::String pdns::rust::web::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::web::rec::KeyValue>& /*unused*/)
+{
+  return {};
+}
+
+::rust::String pdns::rust::web::rec::apiServerZonesPOST(::rust::Str /* unused */)
+{
+  return {};
+}
