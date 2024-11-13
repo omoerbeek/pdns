@@ -390,7 +390,7 @@ extern "Rust" {
     fn api_delete_zone(file: &str, zone: &str) -> Result<()>;
     fn api_delete_zones(file: &str) -> Result<()>;
 
-    fn serveweb1();
+    fn serveweb(addres: &String) -> Result<()>;
 }
 
 struct KeyValue

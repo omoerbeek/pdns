@@ -7,9 +7,11 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
-use tokio::runtime::Runtime;
+use tokio::runtime::Builder;
 
 use crate::recsettings::{*};
+use std::io::ErrorKind;
+use std::str::FromStr;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type MyResult<T> = std::result::Result<T, GenericError>;
@@ -66,11 +68,7 @@ async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
     }
 }
 
-async fn serveweb() -> MyResult<()> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-
-    // We create a TcpListener and bind it to 127.0.0.1:3000
-    let listener = TcpListener::bind(addr).await?;
+async fn serveweb_async(listener: &TcpListener) -> MyResult<()> {
 
     // We start a loop to continuously accept incoming connections
     loop {
@@ -94,18 +92,45 @@ async fn serveweb() -> MyResult<()> {
     }
 }
 
-pub fn serveweb1()  {
+pub fn serveweb(addr_str: &String) -> Result<(), std::io::Error> {
+
+    let runtime = Builder::new_multi_thread()
+        .worker_threads(1)
+        .thread_name("rec/web")
+        .enable_io()
+        .build()
+        .unwrap();
+
     // Socket create and bind should happen here
-    
-    std::thread::spawn(move || {
-        let rt  = Runtime::new().unwrap();
-        let handle = rt.handle();
-        handle.block_on(async {
-            let ret = serveweb().await;
-            if ret.is_err() {
-                eprintln!("An error occured: {:?}", ret);
-            }
-        });
+    let addr = SocketAddr::from_str(addr_str);
+    let addr = match addr {
+        Ok(val) => val,
+        Err(err) => {
+            let msg = format!("`{}' is not a IP:port combination: {}", addr_str, err);
+            return Err(std::io::Error::new(ErrorKind::Other, msg));
+        }
+    };
+
+    let listener = runtime.block_on(async {
+        TcpListener::bind(addr).await
     });
+
+    match listener {
+        Ok(val) => {
+            std::thread::spawn(move || {
+                runtime.block_on(async {
+                    let ret = serveweb_async(&val).await;
+                    if ret.is_err() {
+                        eprintln!("An error occured: {:?}", ret);
+                    }
+                });
+            });
+        },
+        Err(err) => {
+            let msg = format!("Unable to bind web socket: {}", err);
+            return Err(std::io::Error::new(ErrorKind::Other, msg));
+        }
+    }
+    Ok(())
 }
 
