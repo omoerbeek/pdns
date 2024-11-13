@@ -8,6 +8,7 @@ use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
+use tokio::task::JoinSet;
 
 use crate::recsettings::{*};
 use std::io::ErrorKind;
@@ -68,7 +69,7 @@ async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
     }
 }
 
-async fn serveweb_async(listener: &TcpListener) -> MyResult<()> {
+async fn serveweb_async(listener: TcpListener) -> MyResult<()> {
 
     // We start a loop to continuously accept incoming connections
     loop {
@@ -94,17 +95,19 @@ async fn serveweb_async(listener: &TcpListener) -> MyResult<()> {
 
 pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
 
+    let runtime = Builder::new_current_thread()
+        .worker_threads(1)
+        .thread_name("rec/web")
+        .enable_io()
+        .build()?;
+
+    let mut set = JoinSet::new();
+    
     for addr_str in addresses {
-        let runtime = Builder::new_current_thread()
-            .worker_threads(1)
-            .thread_name("rec/web")
-            .enable_io()
-            .build()
-            .unwrap();
 
         // Socket create and bind should happen here
-        let addr = SocketAddr::from_str(addr_str);
-        let addr = match addr {
+        //let addr = SocketAddr::from_str(addr_str);
+        let addr = match SocketAddr::from_str(addr_str) {
             Ok(val) => val,
             Err(err) => {
                 let msg = format!("`{}' is not a IP:port combination: {}", addr_str, err);
@@ -118,14 +121,8 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
 
         match listener {
             Ok(val) => {
-                std::thread::spawn(move || {
-                    runtime.block_on(async {
-                        let ret = serveweb_async(&val).await;
-                        if ret.is_err() {
-                            eprintln!("An error occured: {:?}", ret);
-                        }
-                    });
-                });
+                println!("Listening on {}", addr);
+                set.spawn_on(serveweb_async(val), runtime.handle());
             },
             Err(err) => {
                 let msg = format!("Unable to bind web socket: {}", err);
@@ -133,6 +130,15 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
             }
         }
     }
+    std::thread::Builder::new()
+        .name(String::from("rec/rustweb"))
+        .spawn(move || {
+            runtime.block_on(async {
+                while let Some(res) = set.join_next().await {
+                    println!("{:?}", res);
+                }
+        });
+    })?;
     Ok(())
 }
 
