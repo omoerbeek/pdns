@@ -448,3 +448,20 @@ int main(int argc, char** argv)
     return 1;
   }
 }
+
+// HACK XXX
+
+::rust::String pdns::rust::settings::rec::prometheusMetrics()
+{
+  return {};
+}
+
+::rust::String pdns::rust::settings::rec::apiServerZonesGET()
+{
+  return {};
+}
+
+::rust::String pdns::rust::settings::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::settings::rec::KeyValue>& /*unused*/)
+{
+  return {};
+}

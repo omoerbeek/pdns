@@ -372,7 +372,7 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
 static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
 {
   Json::array doc;
-  for (const auto& val : *SyncRes::t_sstorage.domainmap) {
+  for (const auto& val : *g_initialDomainMap) {
     const SyncRes::AuthDomain& zone = val.second;
     Json::array servers;
     for (const auto& server : zone.d_servers) {
@@ -389,6 +389,13 @@ static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
       {"recursion_desired", zone.d_servers.empty() ? false : zone.d_rdForward}});
   }
   resp->setJsonBody(doc);
+}
+
+::rust::String pdns::rust::settings::rec::apiServerZonesGET()
+{
+  HttpResponse resp;
+  apiServerZonesGET(nullptr, &resp);
+  return resp.body;
 }
 
 static inline DNSName findZoneById(HttpRequest* req)
@@ -488,13 +495,12 @@ static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
     {"result", "Flushed cache."}});
 }
 
-::rust::String pdns::rust::settings::rec::apiServerCacheFlush(::rust::Str domain, ::rust::Str type, ::rust::Str subtree)
+::rust::String pdns::rust::settings::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::settings::rec::KeyValue>& vec)
 {
   HttpRequest request;
-  request.getvars["domain"] = std::string(domain);
-  request.getvars["subtree"] = std::string(subtree);
-  request.getvars["type"] = std::string(type);
-  cerr << domain << endl;
+  for (const auto& [key, value] : vec) {
+    request.getvars[std::string(key)] = std::string(value);
+  }
   HttpResponse response;
   apiServerCacheFlush(&request, &response);
   return response.body;

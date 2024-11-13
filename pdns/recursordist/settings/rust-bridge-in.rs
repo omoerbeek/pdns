@@ -393,11 +393,18 @@ extern "Rust" {
     fn serveweb1();
 }
 
+struct KeyValue
+{
+    key: String,
+    value: String,
+}
+
 unsafe extern "C++" {
     include!("bridge.hh");
     fn qTypeStringToCode(name: &str) -> u16;
     fn isValidHostname(name: &str) -> bool;
 
     fn prometheusMetrics() -> String;
-    fn apiServerCacheFlush(domain: &str, typ: &str, subtree: &str) -> String;
+    fn apiServerCacheFlush(vec: &Vec<KeyValue>) -> String;
+    fn apiServerZonesGET() -> String;
 }
