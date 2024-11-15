@@ -25,6 +25,7 @@
 #include "ws-recursor.hh"
 #include "json.hh"
 
+#include <algorithm>
 #include <string>
 #include "namespaces.hh"
 #include <iostream>
@@ -370,14 +371,21 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
   resp->status = 201;
 }
 
-::rust::String pdns::rust::web::rec::apiServerZonesPOST(::rust::Str str)
+void pdns::rust::web::rec::apiServerZonesPOST(const ::rust::Vec<::rust::u8>& reqbody, pdns::rust::web::rec::Response& rustResponse )
 {
   HttpRequest req;
   HttpResponse resp;
 
-  req.body = std::string(str);
+  req.body = std::string(reinterpret_cast<const char*>(reqbody.data()), reqbody.size());
   apiServerZonesPOST(&req, &resp);
-  return resp.body;
+  cerr << "Status " << resp.status << endl;
+  rustResponse.status = resp.status;
+  rustResponse.body = ::rust::Vec<::rust::u8>();
+  rustResponse.body.reserve(resp.body.size());
+  std::copy(resp.body.cbegin(), resp.body.cend(), std::back_inserter(rustResponse.body));
+  for (const auto& header : resp.headers) {
+    rustResponse.headers.emplace_back(pdns::rust::web::rec::KeyValue{header.first, header.second});
+  }
 }
 
 static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)

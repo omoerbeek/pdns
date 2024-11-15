@@ -599,7 +599,6 @@ LWResult::Result basicRecordsForQnameMinimization(LWResult* res, const DNSName& 
   return {};
 }
 
-::rust::String pdns::rust::web::rec::apiServerZonesPOST(::rust::Str /* unused */)
+void pdns::rust::web::rec::apiServerZonesPOST(const ::rust::Vec<::rust::u8>& /* unused str */, pdns::rust::web::rec::Response& /* unused */ )
 {
-  return {};
 }

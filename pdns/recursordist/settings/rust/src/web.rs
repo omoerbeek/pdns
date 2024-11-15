@@ -61,13 +61,14 @@ async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
         (&Method::POST, "/api/v1/servers/localhost/zones") => {
             let reqbody = req.collect().await?.to_bytes();
             let v: Vec<u8> = reqbody.to_vec();
-            let vstr = std::str::from_utf8(&v);
-            let s: &str = vstr.unwrap();
-            let body = rustweb::apiServerZonesPOST(s);
-            let resp = Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(full(body))?;
+            let mut response = rustweb::Response{status: 0, body: vec![], headers: vec![]};
+            rustweb::apiServerZonesPOST(&v, &mut response);
+            let mut resp = Response::builder()
+                .status(StatusCode::from_u16(response.status).unwrap())
+                .body(full(response.body))?;
+            for kv in response.headers {
+                resp.headers_mut().insert(header::HeaderName::from_bytes(kv.key.as_bytes()).unwrap(), header::HeaderValue::from_str(kv.value.as_str()).unwrap());
+            }
             Ok(resp)
         }
         _ => {
@@ -158,23 +159,30 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
  * Functions callable from C++
  */
 mod rustweb {
-    
+
     extern "Rust" {
         fn serveweb(addreses: &Vec<String>) -> Result<()>;
     }
-    
+
     struct KeyValue
     {
         key: String,
         value: String,
     }
-    
+
+    struct Response
+    {
+        status: u16,
+        body: Vec<u8>,
+        headers: Vec<KeyValue>,
+    }
+
     unsafe extern "C++" {
         include!("bridge.hh");
         fn prometheusMetrics() -> String;
         fn apiServerCacheFlush(vec: &Vec<KeyValue>) -> String;
         fn apiServerZonesGET() -> String;
-        fn apiServerZonesPOST(body: &str) -> String;
+        fn apiServerZonesPOST(body: &Vec<u8>, response: &mut Response);
     }
-    
+
 }

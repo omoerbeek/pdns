@@ -464,7 +464,6 @@ int main(int argc, char** argv)
   return {};
 }
 
-::rust::String pdns::rust::web::rec::apiServerZonesPOST(::rust::Str /* unused str */)
+void pdns::rust::web::rec::apiServerZonesPOST(const ::rust::Vec<::rust::u8>& /* unused str */, pdns::rust::web::rec::Response& /* unused */ )
 {
-  return {};
 }

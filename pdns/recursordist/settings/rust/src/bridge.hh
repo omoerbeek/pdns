@@ -32,9 +32,10 @@ void setThreadName(::rust::Str str);
 
 namespace pdns::rust::web::rec
 {
-::rust::String prometheusMetrics();
 struct KeyValue;
+  struct Response;
+::rust::String prometheusMetrics();
 ::rust::String apiServerCacheFlush(const ::rust::Vec<KeyValue>& vec);
 ::rust::String apiServerZonesGET();
-  ::rust::String apiServerZonesPOST(::rust::Str reqbody);
+  void apiServerZonesPOST(const ::rust::Vec<::rust::u8>& reqbody, Response& response);
 }
