@@ -50,6 +50,19 @@
 
 using json11::Json;
 
+static void fromCxxToRust(const HttpResponse& cxxresp, pdns::rust::web::rec::Response& rustResponse)
+{
+  if (cxxresp.status != 0) {
+    rustResponse.status = cxxresp.status;
+  }
+  rustResponse.body = ::rust::Vec<::rust::u8>();
+  rustResponse.body.reserve(cxxresp.body.size());
+  std::copy(cxxresp.body.cbegin(), cxxresp.body.cend(), std::back_inserter(rustResponse.body));
+  for (const auto& header : cxxresp.headers) {
+    rustResponse.headers.emplace_back(pdns::rust::web::rec::KeyValue{header.first, header.second});
+  }
+}
+
 void productServerStatisticsFetch(map<string, string>& out)
 {
   auto stats = getAllStatsMap(StatComponent::API);
@@ -371,21 +384,14 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
   resp->status = 201;
 }
 
-void pdns::rust::web::rec::apiServerZonesPOST(const ::rust::Vec<::rust::u8>& reqbody, pdns::rust::web::rec::Response& rustResponse )
+void pdns::rust::web::rec::apiServerZonesPOST(const pdns::rust::web::rec::Request& rustRequest, pdns::rust::web::rec::Response& rustResponse)
 {
   HttpRequest req;
   HttpResponse resp;
 
-  req.body = std::string(reinterpret_cast<const char*>(reqbody.data()), reqbody.size());
+  req.body = std::string(reinterpret_cast<const char*>(rustRequest.body.data()), rustRequest.body.size());
   apiServerZonesPOST(&req, &resp);
-  cerr << "Status " << resp.status << endl;
-  rustResponse.status = resp.status;
-  rustResponse.body = ::rust::Vec<::rust::u8>();
-  rustResponse.body.reserve(resp.body.size());
-  std::copy(resp.body.cbegin(), resp.body.cend(), std::back_inserter(rustResponse.body));
-  for (const auto& header : resp.headers) {
-    rustResponse.headers.emplace_back(pdns::rust::web::rec::KeyValue{header.first, header.second});
-  }
+  fromCxxToRust(resp, rustResponse);
 }
 
 static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
@@ -410,11 +416,11 @@ static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
   resp->setJsonBody(doc);
 }
 
-::rust::String pdns::rust::web::rec::apiServerZonesGET()
+void pdns::rust::web::rec::apiServerZonesGET(const pdns::rust::web::rec::Request& /* rustRequest */, pdns::rust::web::rec::Response& rustResponse)
 {
   HttpResponse resp;
   apiServerZonesGET(nullptr, &resp);
-  return resp.body;
+  fromCxxToRust(resp, rustResponse);
 }
 
 static inline DNSName findZoneById(HttpRequest* req)
@@ -514,15 +520,16 @@ static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
     {"result", "Flushed cache."}});
 }
 
-::rust::String pdns::rust::web::rec::apiServerCacheFlush(const ::rust::Vec<pdns::rust::web::rec::KeyValue>& vec)
+void pdns::rust::web::rec::apiServerCacheFlush(const pdns::rust::web::rec::Request& rustRequest, pdns::rust::web::rec::Response& rustResponse)
 {
   HttpRequest request;
-  for (const auto& [key, value] : vec) {
+  for (const auto& [key, value] : rustRequest.vars) {
+    cerr << key << ' ' << value << endl;
     request.getvars[std::string(key)] = std::string(value);
   }
   HttpResponse response;
   apiServerCacheFlush(&request, &response);
-  return response.body;
+  fromCxxToRust(response, rustResponse);
 }
 
 static void apiServerRPZStats(HttpRequest* /* req */, HttpResponse* resp)
@@ -606,11 +613,11 @@ static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
   resp->status = 200;
 }
 
-::rust::String pdns::rust::web::rec::prometheusMetrics()
+void pdns::rust::web::rec::prometheusMetrics(const pdns::rust::web::rec::Request& /* rustRequest */, pdns::rust::web::rec::Response& rustReponse)
 {
   HttpResponse resp;
   prometheusMetrics(nullptr, &resp);
-  return resp.body;
+  fromCxxToRust(resp, rustReponse);
 }
 
 #include "htmlfiles.h"

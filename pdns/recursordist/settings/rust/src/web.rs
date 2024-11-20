@@ -25,60 +25,66 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
         .boxed()
 }
 
-async fn hello(req: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
-    match (req.method(), req.uri().path()) {
+fn api_wrapper(handler: fn(&rustweb::Request, &mut rustweb::Response), request: &rustweb::Request, response: &mut rustweb::Response, headers: &mut header::HeaderMap)
+{
+    response.status = 200;
+    // security headers
+    headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, header::HeaderValue::from_static("*"));
+    headers.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
+    headers.insert(header::X_FRAME_OPTIONS, header::HeaderValue::from_static("deny"));
+    headers.insert(header::HeaderName::from_static("x-permitted-cross-domain-policies"), header::HeaderValue::from_static("none"));
+    headers.insert(header::X_XSS_PROTECTION, header::HeaderValue::from_static("1; mode=block"));
+    headers.insert(header::CONTENT_SECURITY_POLICY, header::HeaderValue::from_static("default-src 'self'; style-src 'self' 'unsafe-inline'"));
+
+    println!("api_wrapper A0 Status {}", response.status);
+    handler(request, response);
+    println!("api_wrapper A Status {}", response.status);
+}
+
+async fn hello(rust_request: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
+    let mut rust_response = Response::builder();
+    let mut vars: Vec<rustweb::KeyValue> = vec![];
+    if let Some(query) = rust_request.uri().query() {
+        for (k, v) in form_urlencoded::parse(query.as_bytes()) {
+            if k == "_" {  // jQuery cache buster
+                continue;
+            }
+            let kv = rustweb::KeyValue{key: k.to_string(), value: v.to_string()};
+            vars.push(kv);
+        }
+    }
+    let mut request = rustweb::Request{body: vec!(), vars: vars};
+    let mut response = rustweb::Response{status: 0, body: vec![], headers: vec![]};
+    let headers = rust_response.headers_mut().expect("no headers?");
+    match (rust_request.method(), rust_request.uri().path()) {
         (&Method::GET, "/metrics") => {
-            let body = rustweb::prometheusMetrics();
-            let resp = Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "text/plain")
-                .body(full(body))?;
-            Ok(resp)
+            rustweb::prometheusMetrics(&request, &mut response);
         }
         (&Method::PUT, "/api/v1/servers/localhost/cache/flush") => {
-            let mut vec: Vec<rustweb::KeyValue> = vec![];
-            if let Some(query) = req.uri().query() {
-                for (k, v) in form_urlencoded::parse(query.as_bytes()) {
-                    let kv = rustweb::KeyValue{key: k.to_string(), value: v.to_string()};
-                    vec.push(kv);
-                }
-            }
-            let body = rustweb::apiServerCacheFlush(&vec);
-            let resp = Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(full(body))?;
-            Ok(resp)
+            api_wrapper(rustweb::apiServerCacheFlush, &request, &mut response, headers);
         }
         (&Method::GET, "/api/v1/servers/localhost/zones") => {
-            let body = rustweb::apiServerZonesGET();
-            let resp = Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(full(body))?;
-            Ok(resp)
+            println!("hello Status {}", response.status);
+            api_wrapper(rustweb::apiServerZonesGET, &request, &mut response, headers);
         }
         (&Method::POST, "/api/v1/servers/localhost/zones") => {
-            let reqbody = req.collect().await?.to_bytes();
-            let v: Vec<u8> = reqbody.to_vec();
-            let mut response = rustweb::Response{status: 0, body: vec![], headers: vec![]};
-            rustweb::apiServerZonesPOST(&v, &mut response);
-            let mut resp = Response::builder()
-                .status(StatusCode::from_u16(response.status).unwrap())
-                .body(full(response.body))?;
-            for kv in response.headers {
-                resp.headers_mut().insert(header::HeaderName::from_bytes(kv.key.as_bytes()).unwrap(), header::HeaderValue::from_str(kv.value.as_str()).unwrap());
-            }
-            Ok(resp)
+            request.body = rust_request.collect().await?.to_bytes().to_vec();
+            rustweb::apiServerZonesPOST(&request, &mut response);
         }
         _ => {
             // Return 404 not found response.
-            Ok(Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(full(NOTFOUND))
-                .unwrap())
+            response.status = StatusCode::NOT_FOUND.as_u16();
+            response.body = NOTFOUND.to_vec();
         }
     }
+    println!("B Status {}", response.status);
+    let mut rust_response = rust_response
+        .status(StatusCode::from_u16(response.status).unwrap())
+        .body(full(response.body))?;
+    for kv in response.headers {
+        rust_response.headers_mut().insert(header::HeaderName::from_bytes(kv.key.as_bytes()).unwrap(), header::HeaderValue::from_str(kv.value.as_str()).unwrap());
+    }
+    Ok(rust_response)
 }
 
 async fn serveweb_async(listener: TcpListener) -> MyResult<()> {
@@ -170,6 +176,12 @@ mod rustweb {
         value: String,
     }
 
+    struct Request
+    {
+        body: Vec<u8>,
+        vars: Vec<KeyValue>,
+    }
+
     struct Response
     {
         status: u16,
@@ -179,10 +191,10 @@ mod rustweb {
 
     unsafe extern "C++" {
         include!("bridge.hh");
-        fn prometheusMetrics() -> String;
-        fn apiServerCacheFlush(vec: &Vec<KeyValue>) -> String;
-        fn apiServerZonesGET() -> String;
-        fn apiServerZonesPOST(body: &Vec<u8>, response: &mut Response);
+        fn prometheusMetrics(request: &Request, response: &mut Response);
+        fn apiServerCacheFlush(request: &Request, response: &mut Response);
+        fn apiServerZonesGET(request: &Request, response: &mut Response);
+        fn apiServerZonesPOST(requst: &Request, response: &mut Response);
     }
 
 }
