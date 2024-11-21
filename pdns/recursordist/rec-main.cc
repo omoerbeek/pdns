@@ -3317,7 +3317,8 @@ int main(int argc, char** argv)
       g_packetCache = std::make_unique<RecursorPacketCache>(g_maxPacketCacheEntries, ::arg().asNum("packetcache-shards"));
     }
 
-    pdns::rust::web::rec::serveweb({"127.0.0.1:3000", "[::1]:3000"});
+    extern void serveRustWeb();
+    serveRustWeb();
     ret = serviceMain(startupLog);
   }
   catch (const PDNSException& ae) {

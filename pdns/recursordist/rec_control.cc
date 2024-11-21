@@ -449,6 +449,10 @@ int main(int argc, char** argv)
   }
 }
 
+void pdns::rust::web::rec::serveStuff(const pdns::rust::web::rec::Request& /* unused */, pdns::rust::web::rec::Response& /* unused */)
+{
+}
+
 void pdns::rust::web::rec::prometheusMetrics(const pdns::rust::web::rec::Request& /* unused */, pdns::rust::web::rec::Response& /* unused */)
 {
 }

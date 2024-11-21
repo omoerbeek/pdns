@@ -35,6 +35,7 @@ namespace pdns::rust::web::rec
 struct KeyValue;
 struct Request;
 struct Response;
+void serveStuff(const Request& rustRequest, Response& rustResponse);
 void prometheusMetrics(const Request& rustRequest, Response& rustResponse);
 void apiServerCacheFlush(const Request& rustRequest, Response& rustResponse);
 void apiServerZonesGET(const Request& rustRequest,Response& rustResponse);

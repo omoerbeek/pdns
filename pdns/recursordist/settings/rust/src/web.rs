@@ -29,7 +29,7 @@ type Func = fn(&rustweb::Request, &mut rustweb::Response) -> Result<(), cxx::Exc
 
 fn api_wrapper(handler: Func, request: &rustweb::Request, response: &mut rustweb::Response, headers: &mut header::HeaderMap)
 {
-    response.status = 200;
+    response.status = StatusCode::OK.as_u16(); // 200;
     // security headers
     headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, header::HeaderValue::from_static("*"));
     headers.insert(header::X_CONTENT_TYPE_OPTIONS, header::HeaderValue::from_static("nosniff"));
@@ -43,13 +43,13 @@ fn api_wrapper(handler: Func, request: &rustweb::Request, response: &mut rustweb
         Ok(_) => {
         }
         Err(_) =>  {
-            response.status = 422;
+            response.status = StatusCode::UNPROCESSABLE_ENTITY.as_u16(); // 422
         }
     }
     println!("api_wrapper A Status {}", response.status);
 }
 
-async fn hello(rust_request: Request<IncomingBody>) -> MyResult<Response<BoxBody>> {
+async fn hello(rust_request: Request<IncomingBody>, urls: &Vec<String>) -> MyResult<Response<BoxBody>> {
     let mut rust_response = Response::builder();
     let mut vars: Vec<rustweb::KeyValue> = vec![];
     if let Some(query) = rust_request.uri().query() {
@@ -61,7 +61,7 @@ async fn hello(rust_request: Request<IncomingBody>) -> MyResult<Response<BoxBody
             vars.push(kv);
         }
     }
-    let mut request = rustweb::Request{body: vec!(), vars: vars};
+    let mut request = rustweb::Request{body: vec!(), uri: rust_request.uri().to_string(), vars: vars};
     let mut response = rustweb::Response{status: 0, body: vec![], headers: vec![]};
     let headers = rust_response.headers_mut().expect("no headers?");
     match (rust_request.method(), rust_request.uri().path()) {
@@ -80,9 +80,21 @@ async fn hello(rust_request: Request<IncomingBody>) -> MyResult<Response<BoxBody
             api_wrapper(rustweb::apiServerZonesPOST as Func, &request, &mut response, headers);
         }
         _ => {
-            // Return 404 not found response.
-            response.status = StatusCode::NOT_FOUND.as_u16();
-            response.body = NOTFOUND.to_vec();
+            println!("{}", rust_request.uri().path());
+            println!("{}", urls.len());
+            let mut path =  rust_request.uri().path();
+            if path == "/" {
+                path = "/index.html";
+            }
+            let pos = urls.iter().position(|x| {
+                String::from("/") + x == path
+            });
+            println!("Pos is {:?}", pos);
+            if let Err(_) = rustweb::serveStuff(&request, &mut response) {
+                // Return 404 not found response.
+                response.status = StatusCode::NOT_FOUND.as_u16();
+                response.body = NOTFOUND.to_vec();
+            }
         }
     }
     println!("B Status {}", response.status);
@@ -95,8 +107,15 @@ async fn hello(rust_request: Request<IncomingBody>) -> MyResult<Response<BoxBody
     Ok(rust_response)
 }
 
-async fn serveweb_async(listener: TcpListener) -> MyResult<()> {
+async fn serveweb_async(listener: TcpListener, urls: &'static Vec<String>) -> MyResult<()> {
 
+    //let request_counter = Arc::new(AtomicUsize::new(0));
+    /*
+    let fut = http1::Builder::new()
+        .serve_connection(move || {
+            service_fn(move |req| hello(req))
+});
+    */
     // We start a loop to continuously accept incoming connections
     loop {
         let (stream, _) = listener.accept().await?;
@@ -104,14 +123,19 @@ async fn serveweb_async(listener: TcpListener) -> MyResult<()> {
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
         // `hyper::rt` IO traits.
         let io = TokioIo::new(stream);
+        let fut = http1::Builder::new()
+            .serve_connection(io, service_fn(move |req| {
+                hello(req, urls)
+            }));
 
         // Spawn a tokio task to serve multiple connections concurrently
         tokio::task::spawn(async move {
             // Finally, we bind the incoming connection to our `hello` service
-            if let Err(err) = http1::Builder::new()
-                // `service_fn` converts our function in a `Service`
-                .serve_connection(io, service_fn(hello))
-                .await
+            if let Err(err) = /* http1::Builder::new()
+            // `service_fn` converts our function in a `Service`
+                .serve_connection(io, service_fn(|req| hello(req)))
+                */
+                fut.await
             {
                 eprintln!("Error serving connection: {:?}", err);
             }
@@ -119,7 +143,7 @@ async fn serveweb_async(listener: TcpListener) -> MyResult<()> {
     }
 }
 
-pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
+pub fn serveweb(addresses: &Vec<String>, urls: &'static Vec<String>) -> Result<(), std::io::Error> {
 
     let runtime = Builder::new_current_thread()
         .worker_threads(1)
@@ -128,7 +152,7 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
         .build()?;
 
     let mut set = JoinSet::new();
-    
+
     for addr_str in addresses {
 
         // Socket create and bind should happen here
@@ -148,7 +172,7 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
         match listener {
             Ok(val) => {
                 println!("Listening on {}", addr);
-                set.spawn_on(serveweb_async(val), runtime.handle());
+                set.spawn_on(serveweb_async(val, urls), runtime.handle());
             },
             Err(err) => {
                 let msg = format!("Unable to bind web socket: {}", err);
@@ -175,7 +199,7 @@ pub fn serveweb(addresses: &Vec<String>) -> Result<(), std::io::Error> {
 mod rustweb {
 
     extern "Rust" {
-        fn serveweb(addreses: &Vec<String>) -> Result<()>;
+        fn serveweb(addreses: &Vec<String>, urls: &'static Vec<String>) -> Result<()>;
     }
 
     struct KeyValue
@@ -187,6 +211,7 @@ mod rustweb {
     struct Request
     {
         body: Vec<u8>,
+        uri: String,
         vars: Vec<KeyValue>,
     }
 
@@ -199,6 +224,7 @@ mod rustweb {
 
     unsafe extern "C++" {
         include!("bridge.hh");
+        fn serveStuff(request: &Request, response: &mut Response) -> Result<()>;
         fn prometheusMetrics(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerCacheFlush(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZonesGET(request: &Request, response: &mut Response) -> Result<()>;

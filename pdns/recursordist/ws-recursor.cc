@@ -660,6 +660,15 @@ static void serveStuff(HttpRequest* req, HttpResponse* resp)
   }
 }
 
+void pdns::rust::web::rec::serveStuff(const pdns::rust::web::rec::Request& rustRequest, pdns::rust::web::rec::Response& rustReponse)
+{
+  HttpRequest request;
+  HttpResponse response;
+  request.url = std::string(rustRequest.uri);
+  serveStuff(&request, &response);
+  fromCxxToRust(response, rustReponse);
+}
+
 const std::map<std::string, MetricDefinition> MetricDefinitionStorage::d_metrics = {
 #include "rec-prometheus-gen.h"
 };
@@ -1002,4 +1011,13 @@ void AsyncWebServer::go()
     return;
   }
   server->asyncWaitForConnections(d_fdm, [this](const std::shared_ptr<Socket>& socket) { serveConnection(socket); });
+}
+
+void serveRustWeb()
+{
+  static ::rust::Vec<::rust::String> urls;
+  for (const auto& [url, _]  : g_urlmap) {
+    urls.emplace_back(url);
+  }
+  pdns::rust::web::rec::serveweb({"127.0.0.1:3000", "[::1]:3000"}, urls);
 }

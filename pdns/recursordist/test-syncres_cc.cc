@@ -584,6 +584,10 @@ LWResult::Result basicRecordsForQnameMinimization(LWResult* res, const DNSName& 
   return LWResult::Result::Timeout;
 }
 
+void pdns::rust::web::rec::serveStuff(const pdns::rust::web::rec::Request& /* unused */, pdns::rust::web::rec::Response& /* unused */)
+{
+}
+
 void pdns::rust::web::rec::prometheusMetrics(const pdns::rust::web::rec::Request& /* unused */, pdns::rust::web::rec::Response& /* unused */)
 {
 }
