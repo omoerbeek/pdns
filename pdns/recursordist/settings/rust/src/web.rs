@@ -25,7 +25,9 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
         .boxed()
 }
 
-fn api_wrapper(handler: fn(&rustweb::Request, &mut rustweb::Response), request: &rustweb::Request, response: &mut rustweb::Response, headers: &mut header::HeaderMap)
+type Func = fn(&rustweb::Request, &mut rustweb::Response) -> Result<(), cxx::Exception>;
+
+fn api_wrapper(handler: Func, request: &rustweb::Request, response: &mut rustweb::Response, headers: &mut header::HeaderMap)
 {
     response.status = 200;
     // security headers
@@ -37,7 +39,13 @@ fn api_wrapper(handler: fn(&rustweb::Request, &mut rustweb::Response), request: 
     headers.insert(header::CONTENT_SECURITY_POLICY, header::HeaderValue::from_static("default-src 'self'; style-src 'self' 'unsafe-inline'"));
 
     println!("api_wrapper A0 Status {}", response.status);
-    handler(request, response);
+    match handler(request, response) {
+        Ok(_) => {
+        }
+        Err(_) =>  {
+            response.status = 422;
+        }
+    }
     println!("api_wrapper A Status {}", response.status);
 }
 
@@ -58,18 +66,18 @@ async fn hello(rust_request: Request<IncomingBody>) -> MyResult<Response<BoxBody
     let headers = rust_response.headers_mut().expect("no headers?");
     match (rust_request.method(), rust_request.uri().path()) {
         (&Method::GET, "/metrics") => {
-            rustweb::prometheusMetrics(&request, &mut response);
+            rustweb::prometheusMetrics(&request, &mut response).unwrap();
         }
         (&Method::PUT, "/api/v1/servers/localhost/cache/flush") => {
-            api_wrapper(rustweb::apiServerCacheFlush, &request, &mut response, headers);
+            api_wrapper(rustweb::apiServerCacheFlush as Func, &request, &mut response, headers);
         }
         (&Method::GET, "/api/v1/servers/localhost/zones") => {
             println!("hello Status {}", response.status);
-            api_wrapper(rustweb::apiServerZonesGET, &request, &mut response, headers);
+            api_wrapper(rustweb::apiServerZonesGET as Func, &request, &mut response, headers);
         }
         (&Method::POST, "/api/v1/servers/localhost/zones") => {
             request.body = rust_request.collect().await?.to_bytes().to_vec();
-            rustweb::apiServerZonesPOST(&request, &mut response);
+            api_wrapper(rustweb::apiServerZonesPOST as Func, &request, &mut response, headers);
         }
         _ => {
             // Return 404 not found response.
@@ -191,10 +199,10 @@ mod rustweb {
 
     unsafe extern "C++" {
         include!("bridge.hh");
-        fn prometheusMetrics(request: &Request, response: &mut Response);
-        fn apiServerCacheFlush(request: &Request, response: &mut Response);
-        fn apiServerZonesGET(request: &Request, response: &mut Response);
-        fn apiServerZonesPOST(requst: &Request, response: &mut Response);
+        fn prometheusMetrics(request: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerCacheFlush(request: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerZonesGET(request: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerZonesPOST(requst: &Request, response: &mut Response) -> Result<()>;
     }
 
 }

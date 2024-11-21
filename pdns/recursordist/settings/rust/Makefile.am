@@ -18,4 +18,4 @@ libsettings.a lib.rs.h: src/web.rs src/bridge.rs src/lib.rs src/helpers.rs Cargo
 	cp target/$(RUSTC_TARGET_ARCH)/cxxbridge/rust/cxx.h cxx.h
 
 clean-local:
-	rm -rf libsettings.a src/lib.rs lib.rs.h cxx.h target
+	rm -rf libsettings.a src/lib.rs lib.rs.h web.rs.h cxx.h target
