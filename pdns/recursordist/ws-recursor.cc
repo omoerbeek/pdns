@@ -360,8 +360,9 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
 
   DNSName zonename = apiNameToDNSName(stringFromJson(document, "name"));
 
-  const auto& iter = g_initialDomainMap->find(zonename);
-  if (iter != g_initialDomainMap->cend()) {
+  auto map = g_initialDomainMap.lock();
+  const auto& iter = (*map)->find(zonename);
+  if (iter != (*map)->cend()) {
     throw ApiException("Zone already exists");
   }
 
@@ -374,7 +375,8 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
 static void apiServerZonesGET(HttpRequest* /* req */, HttpResponse* resp)
 {
   Json::array doc;
-  for (const auto& val : *g_initialDomainMap) {
+  auto lock = g_initialDomainMap.lock();
+  for (const auto& val : **lock) {
     const SyncRes::AuthDomain& zone = val.second;
     Json::array servers;
     for (const auto& server : zone.d_servers) {
