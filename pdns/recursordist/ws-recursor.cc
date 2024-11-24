@@ -359,14 +359,14 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
   Json document = req->json();
 
   DNSName zonename = apiNameToDNSName(stringFromJson(document, "name"));
-
-  auto map = g_initialDomainMap.lock();
-  const auto& iter = (*map)->find(zonename);
-  if (iter != (*map)->cend()) {
-    throw ApiException("Zone already exists");
+  {
+    auto map = g_initialDomainMap.lock();
+    const auto& iter = (*map)->find(zonename);
+    if (iter != (*map)->cend()) {
+      throw ApiException("Zone already exists");
+    }
+    doCreateZone(document);
   }
-
-  doCreateZone(document);
   reloadZoneConfiguration(g_yamlSettings);
   fillZone(zonename, resp);
   resp->status = 201;
