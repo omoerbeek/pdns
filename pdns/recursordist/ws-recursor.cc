@@ -961,7 +961,18 @@ void serveRustWeb()
     urls.emplace_back(url);
   }
   auto address = ComboAddress(arg()["webserver-address"], arg().asNum("webserver-port"));
-  pdns::rust::web::rec::serveweb({::rust::String(address.toStringWithPort())}, ::rust::Slice<const ::rust::String>{urls.data(), urls.size()}, arg()["api-key"], arg()["webserver-password"]);
+
+  auto passwordString = arg()["webserver-password"];
+  std::unique_ptr<CredentialsHolder> password;
+  if (!passwordString.empty()) {
+    password = std::make_unique<CredentialsHolder>(std::move(passwordString), arg().mustDo("webserver-hash-plaintext-credentials"));
+  }
+  auto apikeyString = arg()["api-key"];
+  std::unique_ptr<CredentialsHolder> apikey;
+  if (!apikeyString.empty()) {
+    apikey = std::make_unique<CredentialsHolder>(std::move(apikeyString), arg().mustDo("webserver-hash-plaintext-credentials"));
+  }
+  pdns::rust::web::rec::serveweb({::rust::String(address.toStringWithPort())}, ::rust::Slice<const ::rust::String>{urls.data(), urls.size()}, std::move(password), std::move(apikey));
 }
 
 static void fromCxxToRust(const HttpResponse& cxxresp, pdns::rust::web::rec::Response& rustResponse)

@@ -383,15 +383,19 @@ CredentialsHolder::~CredentialsHolder()
 
 bool CredentialsHolder::matches(const std::string& password) const
 {
+  cerr << "matches " << d_isHashed << ' ' << password << ' ' << d_credentials.getString() << endl;
   if (d_isHashed) {
+     cerr << "Case 1" << endl;
     return verifyPassword(d_credentials.getString(), d_salt, d_workFactor, d_parallelFactor, d_blockSize, password);
   }
   else {
     uint32_t fallback = burtle(reinterpret_cast<const unsigned char*>(password.data()), password.size(), d_fallbackHashPerturb);
     if (fallback != d_fallbackHash) {
+     cerr << "Case 2" << endl;
       return false;
     }
 
+     cerr << "Case 3" << endl;
     return constantTimeStringEquals(password, d_credentials.getString());
   }
 }

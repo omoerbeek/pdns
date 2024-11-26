@@ -5,12 +5,13 @@ TODO
 - Table based routing including OPTIONS request handling
 - Requests taking e.g. an <id>
 - ACLs
-- Authorization
+- Authorization: metrics and plain files (and more?) are not subject to password auth
 - Allow multipe listen addreses in settings (singlevalued right now)
 - TLS?
 - Code is now in settings dir. It's only possible to split the modules into separate Rust libs if we
-  use shared libs (in theory, I did not try). Currenlty all CXX using Rust cargo's must be compiled
-  as one and refer to a single static Rust runtime,
+  use shared libs (in theory, I did not try). Currently all CXX using Rust cargo's must be compiled
+  as one and refer to a single static Rust runtime
+- Ripping out yahttp stuff, providing some basic classees only
 */
 
 use std::net::SocketAddr;
@@ -28,6 +29,7 @@ use std::io::ErrorKind;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use base64::prelude::*;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type MyResult<T> = std::result::Result<T, GenericError>;
@@ -43,6 +45,38 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody {
 
 type Func = fn(&rustweb::Request, &mut rustweb::Response) -> Result<(), cxx::Exception>;
 
+fn compare_authorization(ctx: &Context, reqheaders: &header::HeaderMap) -> bool
+{
+    let mut auth_ok = false;
+    if !ctx.password_ch.is_null() {
+        if let Some(authorization) = reqheaders.get("authorization") {
+            let mut lcase = authorization.as_bytes().to_owned();
+            lcase.make_ascii_lowercase();
+            if lcase.starts_with(b"basic ") {
+                let cookie = &authorization.as_bytes()[6..];
+                if let Ok(plain) = BASE64_STANDARD.decode(cookie) {
+                    println!("plain {:?}", plain);
+                    let mut split = plain.split(|i| *i == b':');
+                    println!("split {:?}", split);
+                    if let Some(_) = split.next() {
+                        println!("split {:?}", split);
+                        if let Some(split) = split.next() {
+                            println!("split {:?}", split);
+                            cxx::let_cxx_string!(s = &split);
+                            auth_ok = ctx.password_ch.as_ref().unwrap().matches(&s);
+                            println!("OK4 {}", auth_ok);
+                        }
+                    }
+                }
+            }
+        }
+        println!("OK5 {}", auth_ok);
+    } else {
+        auth_ok = true;
+    }
+    auth_ok
+}
+
 fn api_wrapper(
     ctx: &Context,
     handler: Func,
@@ -56,7 +90,7 @@ fn api_wrapper(
         header::ACCESS_CONTROL_ALLOW_ORIGIN,
         header::HeaderValue::from_static("*"),
     );
-    if ctx.api_key.is_empty() {
+    if ctx.api_ch.is_null() {
         // XXX log
         // Www-Authenticate: X-API-Key realm="PowerDNS"
         let status =  StatusCode::UNAUTHORIZED;
@@ -69,26 +103,38 @@ fn api_wrapper(
         return;
     }
 
-    // XXX encrypted credentials handling, password handling!
-    let allow_password = false;
+    // XXX password handling!
+    let allow_password = true;
     let mut auth_ok = false;
+    println!("OK0 {}", auth_ok);
     if let Some(api) = reqheaders.get("x-api-key") {
-        auth_ok = api.as_bytes() == ctx.api_key.as_bytes();
-        println!("OK {}", auth_ok);
+        cxx::let_cxx_string!(s = &api.as_bytes());
+        auth_ok = ctx.api_ch.as_ref().unwrap().matches(&s);
+        println!("OK1 {}", auth_ok);
     }
     if !auth_ok {
         for kv in &request.vars {
-            if kv.key == "x-api-key" && kv.value == ctx.api_key {
+            cxx::let_cxx_string!(s = &kv.value);
+            if kv.key == "x-api-key" && ctx.api_ch.as_ref().unwrap().matches(&s) {
                 auth_ok = true;
+                println!("OK2 {}", auth_ok);
                 break;
             }
         }
     }
+    println!("OK3 {}", auth_ok);
     if !auth_ok && allow_password {
-        if !ctx.webserver_password.is_empty() {
-            //auth_ok = req->compareAuthorization(*d_webserverPassword); XXX
-        } else {
-            auth_ok = true;
+        auth_ok = compare_authorization(ctx, reqheaders);
+        if !auth_ok {
+            // XXX log
+            let status =  StatusCode::UNAUTHORIZED;
+            response.status = status.as_u16();
+            headers.insert(
+                header::WWW_AUTHENTICATE,
+                header::HeaderValue::from_static("Basic realm=\"PowerDNS\""),
+            );
+            response.body = status.canonical_reason().unwrap().as_bytes().to_vec();
+            return;
         }
     }
     if !auth_ok {
@@ -97,7 +143,7 @@ fn api_wrapper(
         response.status = status.as_u16();
         headers.insert(
             header::WWW_AUTHENTICATE,
-            header::HeaderValue::from_static("X-API-Key ream=\"PowerDNS\""),
+            header::HeaderValue::from_static("X-API-Key realm=\"PowerDNS\""),
         );
         response.body = status.canonical_reason().unwrap().as_bytes().to_vec();
         return;
@@ -137,8 +183,8 @@ fn api_wrapper(
 
 struct Context {
     urls: Vec<String>,
-    api_key: String,
-    webserver_password: String,
+    password_ch: cxx::UniquePtr<rustweb::CredentialsHolder>,
+    api_ch: cxx::UniquePtr<rustweb::CredentialsHolder>,
     counter: Mutex<u32>,
 }
 
@@ -302,12 +348,12 @@ async fn serveweb_async(listener: TcpListener, ctx: Arc<Context>) -> MyResult<()
     }
 }
 
-pub fn serveweb(addresses: &Vec<String>, urls: &[String], api_key: String, webserver_password: String) -> Result<(), std::io::Error> {
+pub fn serveweb(addresses: &Vec<String>, urls: &[String], password_ch: cxx::UniquePtr<rustweb::CredentialsHolder>, api_ch: cxx::UniquePtr<rustweb::CredentialsHolder>) -> Result<(), std::io::Error> {
     // Context (R/O for now)
     let ctx = Arc::new(Context {
         urls: urls.to_vec(),
-        api_key,
-        webserver_password,
+        password_ch,
+        api_ch,
         counter: Mutex::new(0),
     });
 
@@ -355,14 +401,20 @@ pub fn serveweb(addresses: &Vec<String>, urls: &[String], api_key: String, webse
     Ok(())
 }
 
+unsafe impl Send for rustweb::CredentialsHolder {}
+unsafe impl Sync for rustweb::CredentialsHolder {}
+
 #[cxx::bridge(namespace = "pdns::rust::web::rec")]
 mod rustweb {
+    extern "C++" {
+      type CredentialsHolder;
+    }
 
     /*
      * Functions callable from C++
      */
     extern "Rust" {
-        fn serveweb(addreses: &Vec<String>, urls: &[String], apikey: String, password: String) -> Result<()>;
+        fn serveweb(addreses: &Vec<String>, urls: &[String], pwch: UniquePtr<CredentialsHolder>, apikeych: UniquePtr<CredentialsHolder>) -> Result<()>;
     }
 
     struct KeyValue {
@@ -408,5 +460,7 @@ mod rustweb {
         fn jsonstat(request: &Request, response: &mut Response) -> Result<()>;
         fn prometheusMetrics(request: &Request, response: &mut Response) -> Result<()>;
         fn serveStuff(request: &Request, response: &mut Response) -> Result<()>;
+
+        fn matches(self: &CredentialsHolder, str: &CxxString) -> bool;
     }
 }
