@@ -256,7 +256,6 @@ endif
 CLEANFILES += lua.hpp
 
 pdns_recursor_LDADD = \
-	$(YAHTTP_LIBS) \
 	$(JSON11_LIBS) \
 	$(LIBCRYPTO_LIBS) \
 	$(BOOST_CONTEXT_LIBS) \
