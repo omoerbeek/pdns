@@ -1117,7 +1117,7 @@ const char* isoDateTimeMillis(const struct timeval& tval, timebuf_t& buf)
   return buf.data();
 }
 
-static const char* timestamp(time_t arg, timebuf_t& buf)
+const char* timestamp(time_t arg, timebuf_t& buf)
 {
   const std::string s_timestampFormat = "%Y-%m-%dT%T";
   struct tm tmval{};
@@ -1620,12 +1620,17 @@ LWResult::Result SyncRes::asyncresolveWrapper(const ComboAddress& address, bool 
       auto lock = s_ednsstatus.lock(); // all three branches below need a lock
 
       // Determine new mode
+      if (res->d_validpacket && res->d_haveEDNS && res->d_rcode == ERCode::BADCOOKIE) {
+        cerr << "Retrying with received server cookie" << endl;
+        // This is the first path that re-iterates the loop
+        continue;
+      }
       if (res->d_validpacket && !res->d_haveEDNS && res->d_rcode == RCode::FormErr) {
         mode = EDNSStatus::NOEDNS;
         auto ednsstatus = lock->insert(address).first;
         auto& ind = lock->get<ComboAddress>();
         lock->setMode(ind, ednsstatus, mode, d_now.tv_sec);
-        // This is the only path that re-iterates the loop
+        // This is the second path that re-iterates the loop
         continue;
       }
       if (!res->d_haveEDNS) {
