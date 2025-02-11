@@ -55,14 +55,15 @@ struct CookieEntry
   ComboAddress d_address;
   mutable ComboAddress d_localaddress; // The address we were bound to, see RFC 9018
   mutable EDNSCookiesOpt d_cookie; // Contains both client and server cookie
-  mutable time_t d_lastaccess{};
+  mutable time_t d_lastupdate{};
   mutable bool d_support;
 };
 
 class CookieStore : public multi_index_container < CookieEntry,
   indexed_by < ordered_unique<tag<ComboAddress>, member<CookieEntry, ComboAddress, &CookieEntry::d_address>>,
-               ordered_non_unique<tag<time_t>, member<CookieEntry, time_t, &CookieEntry::d_lastaccess>>>>
+               ordered_non_unique<tag<time_t>, member<CookieEntry, time_t, &CookieEntry::d_lastupdate>>>>
 {
 public:
+  void prune(time_t cutoff);
   static uint64_t dump(const CookieStore&, int fileDesc);
 };
