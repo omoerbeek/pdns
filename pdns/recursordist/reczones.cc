@@ -69,6 +69,9 @@ static void convertServersForAD(const std::string& zone, const std::string& inpu
 {
   vector<string> servers;
   stringtok(servers, input, sepa);
+  if (servers.empty()) {
+    throw PDNSException("empty list of forwarders for domain '" + zone + '"');
+  }
   authDomain.d_servers.clear();
 
   vector<string> addresses;
