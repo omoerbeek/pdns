@@ -27,6 +27,12 @@ using timebuf_t = std::array<char, 64>;
 
 extern const char* timestamp(time_t arg, timebuf_t& buf); // XXX
 
+void CookieStore::prune(time_t cutoff)
+{
+  auto& ind = get<time_t>();
+  ind.erase(ind.begin(), ind.upper_bound(cutoff));
+}
+
 uint64_t CookieStore::dump(const CookieStore& copy, int fileDesc)
 {
   int newfd = dup(fileDesc);
@@ -40,7 +46,7 @@ uint64_t CookieStore::dump(const CookieStore& copy, int fileDesc)
   }
   uint64_t count = 0;
 
-  fprintf(filePtr.get(), "; cookie dump follows\n; ip\tlocal\tcookie\tsupport\tts\n");
+  fprintf(filePtr.get(), "; cookie dump follows\n; server\tlocal\tcookie\tsupport\tts\n");
   for (const auto& entry : copy) {
     count++;
     timebuf_t tmp;

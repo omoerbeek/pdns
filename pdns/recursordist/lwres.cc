@@ -64,6 +64,12 @@ bool g_paddingOutgoing;
 
 static LockGuarded<CookieStore> s_cookiestore;
 
+void pruneCookies(time_t cutoff)
+{
+  auto lock = s_cookiestore.lock();
+  lock->prune(cutoff);
+}
+
 uint64_t dumpCookies(int fileDesc)
 {
   CookieStore copy;
@@ -542,11 +548,11 @@ static LWResult::Result asyncresolve(const ComboAddress& address, const DNSName&
       }
     }
 #endif /* HAVE_FSTRM */
-    
+
     localip.sin4.sin_family = address.sin4.sin_family;
     socklen_t slen = address.getSocklen();
     (void)getsockname(queryfd, reinterpret_cast<sockaddr*>(&localip), &slen); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast
-    cerr << "After send bound to:" << localip.toString() << endl;
+    cerr << "After send bound to: " << localip.toString() << endl;
 
     // sleep until we see an answer to this, interface to mtasker
     ret = arecvfrom(buf, 0, address, len, qid, domain, type, queryfd, *now);
@@ -664,12 +670,18 @@ static LWResult::Result asyncresolve(const ComboAddress& address, const DNSName&
                   found->d_cookie = received;
                   found->d_lastaccess = now->tv_sec;
                   found->d_support = true;
+                  if (!doTCP) {
+                    cerr << "XXXXX acting as if we got badcookie" << endl;
+                    //lwr->d_rcode = ERCode::BADCOOKIE;
+                    lwr->d_validpacket = true;
+                    return LWResult::Result::BadCookie; // this is "success", the error is set in lwr->d_rcode
+                  }
                   uint16_t ercode = (edo.d_extRCode << 4) | lwr->d_rcode;
                   cerr << "ERCode is " << ercode << ' ' << ERCode::to_s(ercode) << endl;
                   if (ercode == ERCode::BADCOOKIE) {
-                    lwr->d_rcode = ERCode::BADCOOKIE;
+                    //lwr->d_rcode = ERCode::BADCOOKIE;
                     lwr->d_validpacket = true;
-                    return LWResult::Result::Success; // this is "success", the error is set in lwr->d_rcode
+                    return LWResult::Result::BadCookie; // this is "success", the error is set in lwr->d_rcode
                   }
                 }
                 else {

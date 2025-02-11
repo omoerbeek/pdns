@@ -1624,7 +1624,7 @@ LWResult::Result SyncRes::asyncresolveWrapper(const ComboAddress& address, bool 
       auto lock = s_ednsstatus.lock(); // all three branches below need a lock
 
       // Determine new mode
-      if (res->d_validpacket && res->d_haveEDNS && res->d_rcode == ERCode::BADCOOKIE) {
+      if (res->d_validpacket && res->d_haveEDNS && ret == LWResult::Result::BadCookie) {
         cerr << "Retrying with received server cookie" << endl;
         // This is the first path that re-iterates the loop
         continue;
@@ -5544,6 +5544,8 @@ bool SyncRes::doResolveAtThisIP(const std::string& prefix, const DNSName& qname,
     ednsStats(ednsmask, qname, prefix);
   }
 
+  cerr << "asyncrW: returns " << int(resolveret) << " rcode is " << int(lwr.d_rcode) << endl;
+
   /* preoutquery killed the query by setting dq.rcode to -3 */
   if (preOutQueryRet == -3) {
     throw ImmediateServFailException("Query killed by policy");
@@ -5552,6 +5554,11 @@ bool SyncRes::doResolveAtThisIP(const std::string& prefix, const DNSName& qname,
   d_totUsec += lwr.d_usec;
 
   if (resolveret == LWResult::Result::Spoofed) {
+    spoofed = true;
+    return false;
+  }
+  if (resolveret == LWResult::Result::BadCookie) {
+    cerr << "Acting as we got a spoof" << endl;
     spoofed = true;
     return false;
   }
@@ -6051,6 +6058,7 @@ int SyncRes::doResolveAt(NsSet& nameservers, DNSName auth, bool flawedNSSet, con
           }
           if (forceTCP || (spoofed || (gotAnswer && truncated))) {
             /* retry, over TCP this time */
+            cerr << "Retry over TCP" << endl;
             gotAnswer = doResolveAtThisIP(prefix, qname, qtype, lwr, ednsmask, auth, sendRDQuery, wasForwarded,
                                           tns->first, *remoteIP, true, doDoT, truncated, spoofed, context.extendedError);
           }

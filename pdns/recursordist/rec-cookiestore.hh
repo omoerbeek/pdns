@@ -64,5 +64,6 @@ class CookieStore : public multi_index_container < CookieEntry,
                ordered_non_unique<tag<time_t>, member<CookieEntry, time_t, &CookieEntry::d_lastaccess>>>>
 {
 public:
+  void prune(time_t cutoff);
   static uint64_t dump(const CookieStore&, int fileDesc);
 };

@@ -184,8 +184,8 @@ int UDPClientSocks::makeClientSocket(int family, const std::optional<ComboAddres
       sin.setPort(port);
     }
     else {
-      cerr << "Picking random local addrees " << endl;
       sin = pdns::getQueryLocalAddress(family, port); // does htons for us
+      cerr << "Bound to random local addrees " << sin.toString() << endl;
     }
     if (::bind(ret, reinterpret_cast<struct sockaddr*>(&sin), sin.getSocklen()) >= 0) { // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
       break;
