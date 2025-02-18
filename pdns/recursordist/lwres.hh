@@ -72,6 +72,7 @@ public:
     Spoofed = 4, /* Spoofing attempt (too many near-misses) */
     ChainLimitError = 5,
     BadCookie = 6,
+    BindError = 7,
   };
 
   [[nodiscard]] static bool isLimitError(Result res)

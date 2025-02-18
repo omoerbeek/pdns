@@ -527,8 +527,18 @@ static LWResult::Result asyncresolve(const ComboAddress& address, const DNSName&
 
   if (!doTCP) {
     int queryfd;
-    ret = asendto(vpacket.data(), vpacket.size(), 0, address, addressToBindTo, qid, domain, type, weWantEDNSSubnet, &queryfd, *now);
-
+    try {
+      ret = asendto(vpacket.data(), vpacket.size(), 0, address, addressToBindTo, qid, domain, type, weWantEDNSSubnet, &queryfd, *now);
+    }
+    catch (const PDNSException& e) {
+      if (addressToBindTo) {
+        // Cookie info already has been added to packet, so we must retry from a higher level
+        auto lock = s_cookiestore.lock();
+        lock->erase(address);
+        return LWResult::Result::BindError;
+      }
+      throw;
+    }
     if (ret != LWResult::Result::Success) {
       return ret;
     }
