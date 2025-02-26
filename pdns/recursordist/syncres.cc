@@ -1945,6 +1945,9 @@ int SyncRes::doResolveNoQNameMinimization(const DNSName& qname, const QType qtyp
     d_serveStale = loop == 1;
     if (d_serveStale) {
       LOG(prefix << qname << ": Restart, with serve-stale enabled" << endl);
+      if (s_addExtendedResolutionDNSErrors) {
+        context.extendedError = EDNSExtendedError{static_cast<uint16_t>(EDNSExtendedError::code::StaleAnswer), ""};
+      }
     }
     // This is a difficult way of expressing "this is a normal query", i.e. not getRootNS.
     if (!d_updatingRootNS || qtype.getCode() != QType::NS || !qname.isRoot()) {
@@ -2758,7 +2761,9 @@ bool SyncRes::doCNAMECacheCheck(const DNSName& qname, const QType qtype, vector<
       LOG(prefix << qname << ": Updating validation state for response to " << qname << " from " << context.state << " with the state from the DNAME/CNAME quest: " << cnameContext.state << endl);
       pdns::dedupRecords(ret); // multiple NSECS could have been added, #14120
       updateValidationState(qname, context.state, cnameContext.state, prefix);
-
+      if (cnameContext.extendedError) {
+        context.extendedError = cnameContext.extendedError;
+      }
       return true;
     }
   }
