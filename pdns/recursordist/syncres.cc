@@ -4419,10 +4419,10 @@ void SyncRes::sanitizeRecords(const std::string& prefix, LWResult& lwr, const DN
     }
   } // end of first loop, handled answer and most of authority section
 
-  sanitizeRecordsPass2(prefix, lwr, qname, auth, allowedAnswerNames, allowedAdditionals, cnamesSeen, isNXDomain, isNXQType, skipvec, skipCount);
+  sanitizeRecordsPass2(prefix, lwr, qname, qtype, auth, allowedAnswerNames, allowedAdditionals, cnamesSeen, isNXDomain, isNXQType, skipvec, skipCount);
 }
 
-void SyncRes::sanitizeRecordsPass2(const std::string& prefix, LWResult& lwr, const DNSName& qname, const DNSName& auth, std::unordered_set<DNSName>& allowedAnswerNames, std::unordered_set<DNSName>& allowedAdditionals, const std::unordered_set<DNSName>& cnamesSeen, bool isNXDomain, bool isNXQType, std::vector<bool>& skipvec, unsigned int& skipCount)
+void SyncRes::sanitizeRecordsPass2(const std::string& prefix, LWResult& lwr, const DNSName& qname, const QType qtype, const DNSName& auth, std::unordered_set<DNSName>& allowedAnswerNames, std::unordered_set<DNSName>& allowedAdditionals, const std::unordered_set<DNSName>& cnamesSeen, bool isNXDomain, bool isNXQType, std::vector<bool>& skipvec, unsigned int& skipCount)
 {
   // Second loop, we know now if the answer was NxDomain or NoData
   unsigned int counter = 0;
@@ -4442,9 +4442,9 @@ void SyncRes::sanitizeRecordsPass2(const std::string& prefix, LWResult& lwr, con
         skipvec[counter] = true;
         ++skipCount;
       }
-      // If we have a CNAME, skip other records types for that name except RRSIGs
-      if (cnamesSeen.find(rec->d_name) != cnamesSeen.end() && rec->d_type != QType::CNAME && rec->d_type != QType::RRSIG) {
-        LOG(prefix << qname << ": Removing irrelevant non-CNAME record '" << rec->toString() << "' in the ANSWER section received from " << auth << endl);
+      // If we have a CNAME, skip answer records for the requested type
+      if (rec->d_type == qtype && rec->d_name == qname && cnamesSeen.find(rec->d_name) != cnamesSeen.end() && qtype != QType::CNAME) {
+        LOG(prefix << qname << ": Removing answer record in presence of CNAME record '" << rec->toString() << "' in the ANSWER section received from " << auth << endl);
         skipvec[counter] = true;
         ++skipCount;
         continue;
@@ -5787,8 +5787,10 @@ bool SyncRes::processAnswer(unsigned int depth, const string& prefix, LWResult& 
 
   // If we both have a CNAME and an answer, let the CNAME take precedence. This *should* not happen
   // (because CNAMEs cannot co-exist with other records), but reality says otherwise. Other
-  // resolvers choose to follow the CNAME in this case as well.
-  if (done && newtarget.empty()) {
+  // resolvers choose to follow the CNAME in this case as well. We removed the answer record from
+  // the records received from the auth when sanitizing, so `done' should not be set when a CNAME is
+  // present.
+  if (done) {
     LOG(prefix << qname << ": Status=got results, this level of recursion done" << endl);
     LOG(prefix << qname << ": Validation status is " << state << endl);
     return true;
