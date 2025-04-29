@@ -46,6 +46,69 @@ BOOST_AUTO_TEST_CASE(resource1)
   BOOST_CHECK_EQUAL(makeHexDump(data, " "), "0a 0d 0a 04 66 6f 6f 30 12 05 0a 03 62 61 72 0a 11 0a 04 66 6f 6f 31 12 09 21 8f c2 f5 28 5c ff 58 40 10 63 1a 2c 0a 07 73 63 68 65 6d 61 30 12 05 74 79 70 65 30 1a 04 69 64 30 30 1a 04 69 64 30 31 22 06 64 65 73 63 30 30 22 06 64 65 73 63 30 31 1a 2c 0a 07 73 63 68 65 6d 61 31 12 05 74 79 70 65 31 1a 04 69 64 31 30 1a 04 69 64 31 31 22 06 64 65 73 63 31 30 22 06 64 65 73 63 31 31 ");
 }
 
+template <typename T>
+static void testAny(const T& testcase)
+{
+  std::string data;
+  protozero::pbf_writer writer{data};
+  pdns::trace::AnyValue wrapper{testcase};
+  wrapper.encode(writer);
+#if 0
+  std::ofstream x("x");
+  x << data;
+#endif
+
+  protozero::pbf_reader reader{data};
+  pdns::trace::AnyValue value = pdns::trace::AnyValue::decode(reader);
+  if (!std::holds_alternative<char>(value)) {
+    BOOST_CHECK(testcase == std::get<T>(value));
+  }
+  else {
+    if (std::holds_alternative<pdns::trace::ArrayValue>(wrapper)) {
+      BOOST_CHECK(std::get<pdns::trace::ArrayValue>(wrapper).values.empty());
+    }
+    else if (std::holds_alternative<pdns::trace::KeyValueList>(wrapper)) {
+      BOOST_CHECK(std::get<pdns::trace::KeyValueList>(wrapper).values.empty());
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(any)
+{
+  testAny(std::string{"foo"});
+  testAny(false);
+  testAny(true);
+  testAny(static_cast<int64_t>(0));
+  testAny(static_cast<int64_t>(1));
+  testAny(static_cast<int64_t>(-1));
+  testAny(std::numeric_limits<int64_t>::min());
+  testAny(std::numeric_limits<int64_t>::max());
+  testAny(0.0);
+  testAny(1.0);
+  testAny(-1.0);
+  testAny(std::numeric_limits<double>::min());
+  testAny(std::numeric_limits<double>::max());
+
+  pdns::trace::ArrayValue avalue;
+  testAny(avalue);
+  avalue.values.emplace_back(pdns::trace::AnyValue{"foo"});
+  avalue.values.emplace_back(pdns::trace::AnyValue{1.99});
+  testAny(avalue);
+
+  pdns::trace::KeyValueList kvlist;
+  testAny(kvlist);
+  kvlist.values.emplace_back(pdns::trace::KeyValue{"foo", {"bar"}});
+  kvlist.values.emplace_back(pdns::trace::KeyValue{"baz", {1.99}});
+  testAny(kvlist);
+
+  std::vector<uint8_t> bytes;
+  testAny(bytes);
+  bytes.push_back(0);
+  bytes.push_back(1);
+  bytes.push_back(2);
+  testAny(bytes);
+}
+
 BOOST_AUTO_TEST_CASE(traces)
 {
   pdns::trace::Span span = {
@@ -85,6 +148,13 @@ BOOST_AUTO_TEST_CASE(traces)
                           "00 12 f4 1e fb eb 6f 15 4a 1c 0a 0c 6d 79 2e 73 "
                           "70 61 6e 2e 61 74 74 72 12 0c 0a 0a 73 6f 6d 65 "
                           "20 76 61 6c 75 65 ";
+  BOOST_CHECK_EQUAL(makeHexDump(data, " "), expected);
+
+  protozero::pbf_reader reader{data};
+  auto copy = pdns::trace::TracesData::decode(reader);
+  data.clear();
+  protozero::pbf_writer copyWriter{data};
+  copy.encode(copyWriter);
   BOOST_CHECK_EQUAL(makeHexDump(data, " "), expected);
 }
 BOOST_AUTO_TEST_SUITE_END()
