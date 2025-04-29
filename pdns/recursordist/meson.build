@@ -134,6 +134,7 @@ common_sources += files(
   src_dir / 'negcache.cc',
   src_dir / 'nsecrecords.cc',
   src_dir / 'protozero.cc',
+  src_dir / 'protozero-trace.cc',
   src_dir / 'proxy-protocol.cc',
   src_dir / 'pubsuffixloader.cc',
   src_dir / 'qtype.cc',
