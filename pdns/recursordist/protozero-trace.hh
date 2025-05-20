@@ -29,6 +29,8 @@
 #include <protozero/pbf_reader.hpp>
 #include <protozero/pbf_writer.hpp>
 
+#include "dns_random.hh"
+
 // See https://github.com/open-telemetry/opentelemetry-proto/tree/main/opentelemetry/proto
 
 namespace pdns::trace
@@ -220,6 +222,26 @@ struct InstrumentationScope
 using TraceID = std::array<uint8_t, 16>;
 using SpanID = std::array<uint8_t, 8>;
 
+inline void random(TraceID& trace)
+{
+  dns_random(trace.data(), trace.size());
+}
+
+inline void random(SpanID& span)
+{
+  dns_random(span.data(), span.size());
+}
+
+inline void reset(TraceID& trace)
+{
+  memset(trace.data(), 0, trace.size());
+}
+
+inline void reset(SpanID& span)
+{
+  memset(span.data(), 0, span.size());
+}
+
 inline void encode(protozero::pbf_writer& writer, uint8_t field, const TraceID& value)
 {
   writer.add_bytes(field, reinterpret_cast<const char*>(value.data()), value.size()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast) it's the API
@@ -272,6 +294,14 @@ struct Status
   void encode(protozero::pbf_writer& writer) const;
   static Status decode(protozero::pbf_reader& reader);
 };
+
+inline uint64_t timestamp()
+{
+  timespec now{};
+  clock_gettime(CLOCK_REALTIME, &now);
+  return (1000000000ULL* now.tv_sec) + now.tv_nsec;
+
+}
 
 struct Span
 {
@@ -465,6 +495,10 @@ struct Span
   // [Optional].
   uint32_t flags{0}; // = 16;
 
+  void close()
+  {
+    end_time_unix_nano = timestamp();
+  }
   void encode(protozero::pbf_writer& writer) const;
   static Span decode(protozero::pbf_reader& reader);
 };
@@ -514,6 +548,12 @@ struct ScopeSpans
   // This schema_url applies to all spans and span events in the "spans" field.
   std::string schema_url; // = 3
 
+  void close()
+  {
+    for (auto& element : spans) {
+      element.close();
+    }
+  }
   void encode(protozero::pbf_writer& writer) const;
   static ScopeSpans decode(protozero::pbf_reader& reader);
 };
@@ -534,6 +574,12 @@ struct ResourceSpans
   // to the data in the "scope_spans" field which have their own schema_url field.
   std::string schema_url; // = 3
 
+  void close()
+  {
+    for (auto& element : scope_spans) {
+      element.close();
+    }
+  }
   void encode(protozero::pbf_writer& writer) const;
   static ResourceSpans decode(protozero::pbf_reader& reader);
 };
@@ -557,8 +603,22 @@ struct TracesData
   // array will contain multiple elements.
   std::vector<ResourceSpans> resource_spans; // = 1
 
+  void close()
+  {
+    for (auto& element : resource_spans) {
+      element.close();
+    }
+  }
   void encode(protozero::pbf_writer& writer) const;
   static TracesData decode(protozero::pbf_reader& reader);
+
+  [[nodiscard]] std::string encode() const {
+    std::string data;
+    protozero::pbf_writer writer{data};
+    encode(writer);
+    return data;
+  }
+
 };
 
 inline ArrayValue ArrayValue::decode(protozero::pbf_reader& reader)
