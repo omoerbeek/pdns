@@ -300,7 +300,6 @@ inline uint64_t timestamp()
   timespec now{};
   clock_gettime(CLOCK_REALTIME, &now);
   return (1000000000ULL* now.tv_sec) + now.tv_nsec;
-
 }
 
 struct Span
@@ -424,7 +423,7 @@ struct Span
   std::vector<Event> events; // = 11
   // dropped_events_count is the number of dropped events. If the value is 0, then no
   // events were dropped.
-  uint32_t dropped_events_count; // = 12
+  uint32_t dropped_events_count{0}; // = 12
 
   // A pointer from the current span to another span in the same trace or in a
   // different trace. For example, this can be used in batching operations,

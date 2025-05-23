@@ -115,7 +115,7 @@ struct DNSComboWriter
   ComboAddress d_destination; // the address we assume the query is sent to, might be set by proxy protocol
   ComboAddress d_mappedSource; // the source address after being mapped by table based proxy mapping
   RecEventTrace d_eventTrace;
-  pdns::trace::TracesData d_otTrace;
+  pdns::trace::Span d_otTrace;
   boost::uuids::uuid d_uuid;
   string d_requestorId;
   string d_deviceId;
@@ -638,7 +638,7 @@ void protobufLogResponse(const struct dnsheader* header, LocalStateHolder<LuaCon
                          const boost::uuids::uuid& uniqueId, const string& requestorId, const string& deviceId,
                          const string& deviceName, const std::map<std::string, RecursorLua4::MetaValue>& meta,
                          const RecEventTrace& eventTrace,
-                         const pdns::trace::TracesData& otTrace,
+                         pdns::trace::Span& otTrace,
                          const std::unordered_set<std::string>& policyTags);
 void requestWipeCaches(const DNSName& canon);
 void startDoResolve(void*);

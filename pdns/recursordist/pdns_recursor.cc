@@ -1876,7 +1876,10 @@ void startDoResolve(void* arg) // NOLINT(readability-function-cognitive-complexi
       }
       if (resolver.d_eventTrace.enabled() && (SyncRes::s_event_trace_enabled & SyncRes::event_trace_to_ot) != 0) {
         resolver.d_otTrace.close();
-        string otData = resolver.d_otTrace.encode();
+        auto spans = resolver.d_eventTrace.convertToOT(resolver.d_otTrace);
+        pdns::trace::TracesData otTrace{
+          .resource_spans = { pdns::trace::ResourceSpans{.resource = {}, .scope_spans = {{.spans = spans}}}}};
+        string otData = otTrace.encode();
         pbMessage.setOpenTelemetryData(otData);
       }
       if (comboWriter->d_logResponse) {
@@ -2176,7 +2179,7 @@ bool expectProxyProtocol(const ComboAddress& from, const ComboAddress& listenAdd
 // source: the address we assume the query is coming from, might be set by proxy protocol
 // destination: the address we assume the query was sent to, might be set by proxy protocol
 // mappedSource: the address we assume the query is coming from. Differs from source if table based mapping has been applied
-static string* doProcessUDPQuestion(const std::string& question, const ComboAddress& fromaddr, const ComboAddress& destaddr, ComboAddress source, ComboAddress destination, const ComboAddress& mappedSource, struct timeval tval, int fileDesc, std::vector<ProxyProtocolValue>& proxyProtocolValues, RecEventTrace& eventTrace, pdns::trace::TracesData& otTrace) // NOLINT(readability-function-cognitive-complexity): https://github.com/PowerDNS/pdns/issues/12791
+static string* doProcessUDPQuestion(const std::string& question, const ComboAddress& fromaddr, const ComboAddress& destaddr, ComboAddress source, ComboAddress destination, const ComboAddress& mappedSource, struct timeval tval, int fileDesc, std::vector<ProxyProtocolValue>& proxyProtocolValues, RecEventTrace& eventTrace, pdns::trace::Span& otTrace) // NOLINT(readability-function-cognitive-complexity): https://github.com/PowerDNS/pdns/issues/12791
 {
   RecThreadInfo::self().incNumberOfDistributedQueries();
   gettimeofday(&g_now, nullptr);
@@ -2469,7 +2472,7 @@ static void handleNewUDPQuestion(int fileDesc, FDMultiplexer::funcparam_t& /* va
   bool firstQuery = true;
   std::vector<ProxyProtocolValue> proxyProtocolValues;
   RecEventTrace eventTrace;
-  pdns::trace::TracesData otTrace;
+  pdns::trace::Span otTrace;
 
   for (size_t queriesCounter = 0; queriesCounter < g_maxUDPQueriesPerRound; queriesCounter++) {
     bool proxyProto = false;
@@ -2481,16 +2484,24 @@ static void handleNewUDPQuestion(int fileDesc, FDMultiplexer::funcparam_t& /* va
     if (ssize_t len = recvmsg(fileDesc, &msgh, 0); len >= 0) {
       eventTrace.clear();
       eventTrace.setEnabled(SyncRes::s_event_trace_enabled != 0);
+      // evenTrace use monotonic time, while OpenTelemetry uses absolute time. setEnabled()
+      // estabslished the reference point, get an absolute TS as close as possible to the
+      // eventTrace start of trace time.
+      auto traceTS = pdns::trace::timestamp();
       eventTrace.add(RecEventTrace::ReqRecv);
-      pdns::trace::TraceID traceid;
-      pdns::trace::random(traceid);
-      pdns::trace::SpanID spanid;
-      pdns::trace::random(spanid);
-      pdns::trace::SpanID parent;
-      pdns::trace::reset(parent);
-      pdns::trace::Span span{.name = "RecRequest", .trace_id = traceid, .span_id = spanid, .parent_span_id = parent, .start_time_unix_nano = pdns::trace::timestamp()};
-      pdns::trace::ScopeSpans scopeSpan{{}, {span}, {}};
-      otTrace.resource_spans.emplace_back(pdns::trace::ResourceSpans{.resource = {}, .scope_spans = {scopeSpan}});
+      if ((SyncRes::s_event_trace_enabled & SyncRes::event_trace_to_ot) != 0) {
+        otTrace.start_time_unix_nano = traceTS;
+        pdns::trace::TraceID traceid;
+        pdns::trace::random(traceid);
+        pdns::trace::SpanID spanid;
+        pdns::trace::random(spanid);
+        pdns::trace::SpanID parent;
+        pdns::trace::reset(parent);
+        otTrace.name = "RecRequest";
+        otTrace.trace_id = traceid;
+        otTrace.span_id = spanid;
+        otTrace.parent_span_id = parent;
+      }
       firstQuery = false;
 
       if ((msgh.msg_flags & MSG_TRUNC) != 0) {

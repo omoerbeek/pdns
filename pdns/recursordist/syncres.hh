@@ -580,7 +580,7 @@ public:
   boost::optional<string> d_routingTag;
   ComboAddress d_fromAuthIP;
   RecEventTrace d_eventTrace;
-  pdns::trace::TracesData d_otTrace;
+  pdns::trace::Span d_otTrace;
   std::shared_ptr<Logr::Logger> d_slog = g_slog->withName("syncres");
   boost::optional<EDNSExtendedError> d_extendedError;
 
