@@ -41,7 +41,7 @@ permissions: # least privileges, see https://docs.github.com/en/actions/using-wo
 
 jobs:
   call-build-packages:
-    uses: PowerDNS/pdns/.github/workflows/build-packages.yml@master
+    uses: omoerbeek/pdns/.github/workflows/build-packages.yml@build-trixie
     with:
       product: ${{ github.event.inputs.product }}
       os: ${{ github.event.inputs.os }}
