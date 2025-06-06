@@ -1876,9 +1876,7 @@ void startDoResolve(void* arg) // NOLINT(readability-function-cognitive-complexi
       }
       if (resolver.d_eventTrace.enabled() && (SyncRes::s_event_trace_enabled & SyncRes::event_trace_to_ot) != 0) {
         resolver.d_otTrace.close();
-        auto spans = resolver.d_eventTrace.convertToOT(resolver.d_otTrace);
-        pdns::trace::TracesData otTrace{
-          .resource_spans = { pdns::trace::ResourceSpans{.resource = {.attributes = {{"service.name", {{"rec"}}}}}, .scope_spans = {{.spans = spans}}}}};
+        auto otTrace = pdns::trace::TracesData::boilerPlate("rec", resolver.d_eventTrace.convertToOT(resolver.d_otTrace));
         string otData = otTrace.encode();
         pbMessage.setOpenTelemetryData(otData);
       }
