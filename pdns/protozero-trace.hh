@@ -339,6 +339,22 @@ inline uint64_t timestamp()
   return (1000000000ULL * now.tv_sec) + now.tv_nsec;
 }
 
+struct InitialSpanInfo
+{
+  TraceID trace_id{};
+  SpanID span_id{};
+  SpanID parent_span_id{};
+  uint64_t start_time_unix_nano{0};
+
+  void clear()
+  {
+    pdns::trace::clear(trace_id);
+    pdns::trace::clear(span_id);
+    pdns::trace::clear(parent_span_id);
+    start_time_unix_nano = 0;
+  }
+};
+
 struct Span
 {
   // A unique identifier for a trace. All spans from the same trace share
@@ -694,6 +710,6 @@ inline KeyValueList KeyValueList::decode(protozero::pbf_reader& reader)
   return pdns::trace::decode<KeyValueList, KeyValue>(reader);
 }
 
-void extractOTraceIDs(const EDNSOptionViewMap& map, pdns::trace::Span& span);
+void extractOTraceIDs(const EDNSOptionViewMap& map, pdns::trace::InitialSpanInfo& span);
 
 } // namespace pdns::trace
