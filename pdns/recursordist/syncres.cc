@@ -4309,7 +4309,7 @@ void SyncRes::sanitizeRecords(const std::string& prefix, LWResult& lwr, const DN
   unsigned int skipCount = 0;
 
   for (auto rec = lwr.d_records.cbegin(); rec != lwr.d_records.cend(); ++rec, ++counter) {
-
+    LOG(prefix << qname << ": check " << rec->d_name << '/' << QType(rec->d_type) << haveAnswers << isNXDomain << isNXQType << endl);
     // Allow OPT record containing EDNS(0) data
     if (rec->d_type == QType::OPT) {
       continue;
@@ -4369,6 +4369,7 @@ void SyncRes::sanitizeRecords(const std::string& prefix, LWResult& lwr, const DN
         ++skipCount;
         continue;
       }
+      LOG(prefix << qname << " HAVE ANSWER " << endl);
 
       haveAnswers = true;
       if (rec->d_type == QType::CNAME) {
@@ -4419,6 +4420,7 @@ void SyncRes::sanitizeRecords(const std::string& prefix, LWResult& lwr, const DN
           ++skipCount;
           continue;
         }
+        LOG(prefix << qname << " ANSWER " << haveAnswers << endl);
 
         if (!haveAnswers) {
           switch (lwr.d_rcode) {
@@ -4451,6 +4453,7 @@ void SyncRes::sanitizeRecordsPass2(const std::string& prefix, LWResult& lwr, con
   // Second loop, we know now if the answer was NxDomain or NoData
   unsigned int counter = 0;
   for (auto rec = lwr.d_records.cbegin(); rec != lwr.d_records.cend(); ++rec, ++counter) {
+    LOG(prefix << qname << ": check 2" << rec->d_name << '/' << QType(rec->d_type) << isNXDomain << isNXQType << endl);
 
     if (skipvec[counter]) {
       continue;
