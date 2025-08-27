@@ -318,6 +318,7 @@ static bool tcpconnect(const ComboAddress& ip, TCPOutConnectionManager::Connecti
   // Returned state ignored
   // This can throw an exception, retry will need to happen at higher level
   connection.d_handler->tryConnect(SyncRes::s_tcp_fast_open_connect, ip);
+  cerr << "TCPConnect " << & connection << ' ' << connection.d_handler.get() << ' ' << connection.d_handler->getDescriptor() << endl;
   return true;
 }
 
@@ -340,11 +341,13 @@ static LWResult::Result tcpsendrecv(const ComboAddress& ip, TCPOutConnectionMana
   packet.insert(packet.end(), vpacket.begin(), vpacket.end());
 
   LWResult::Result ret = asendtcp(packet, connection.d_handler);
+  cerr << "asendtcp1: " << &connection << ' ' << int(ret) << endl;
   if (ret != LWResult::Result::Success) {
     return ret;
   }
 
   ret = arecvtcp(packet, 2, connection.d_handler, false);
+  cerr << "arecvtcp1: " << &connection << ' ' << int(ret) << endl;
   if (ret != LWResult::Result::Success) {
     return ret;
   }
@@ -355,6 +358,7 @@ static LWResult::Result tcpsendrecv(const ComboAddress& ip, TCPOutConnectionMana
   // XXX receive into buf directly?
   packet.resize(len);
   ret = arecvtcp(packet, len, connection.d_handler, false);
+  cerr << "arecvtcp1: " << &connection << ' ' << int(ret) << endl;
   if (ret != LWResult::Result::Success) {
     return ret;
   }
@@ -504,7 +508,9 @@ static LWResult::Result asyncresolve(const ComboAddress& address, const DNSName&
         // *will* get a new connection, so this loop is not endless.
         isNew = true; // tcpconnect() might throw for new connections. In that case, we want to break the loop, scanbuild complains here, which is a false positive afaik
         isNew = tcpconnect(address, connection, dnsOverTLS, nsName);
+        cerr << "isNew: " << isNew << ' ' << &connection << ' ' << connection.d_handler.get() << ' ' << connection.d_handler->getDescriptor() << "dnsOverTLS: " << dnsOverTLS << endl;
         ret = tcpsendrecv(address, connection, localip, vpacket, len, buf);
+        cerr << "tcpsendrecv: " << &connection << ' ' << connection.d_handler.get() << ' ' << connection.d_handler->getDescriptor() << endl;
 #ifdef HAVE_FSTRM
         if (fstrmQEnabled) {
           logFstreamQuery(fstrmLoggers, queryTime, localip, address, !dnsOverTLS ? DnstapMessage::ProtocolType::DoTCP : DnstapMessage::ProtocolType::DoT, context.d_auth, vpacket);
@@ -514,6 +520,7 @@ static LWResult::Result asyncresolve(const ComboAddress& address, const DNSName&
           break;
         }
         connection.d_handler->close();
+        cerr << "close: " << &connection << ' ' << connection.d_handler.get() << ' ' << connection.d_handler->getDescriptor() << endl;
       }
       catch (const NetworkError&) {
         ret = LWResult::Result::OSLimitError; // OS limits error
@@ -668,7 +675,7 @@ LWResult::Result asyncresolve(const ComboAddress& address, const DNSName& domain
   auto ret = asyncresolve(address, domain, type, doTCP, sendRDQuery, EDNS0Level, now, srcmask, context, outgoingLoggers, fstrmLoggers, exportTypes, lwr, chained, connection);
 
   if (doTCP) {
-    if (connection.d_handler && lwr->d_validpacket) {
+    if (false && connection.d_handler && lwr->d_validpacket) {
       t_tcp_manager.store(*now, address, std::move(connection));
     }
   }

@@ -8,6 +8,7 @@
 #include "libssl.hh"
 #include "misc.hh"
 #include "noinitvector.hh"
+#include <iostream>
 
 /* Async is only returned for TLS connections, if OpenSSL's async mode has been enabled */
 enum class IOState : uint8_t { Done, NeedRead, NeedWrite, Async };
@@ -271,6 +272,8 @@ public:
 
   ~TCPIOHandler()
   {
+    cerr << "DT " << this << ' ' << (d_conn ? d_conn.get() : nullptr) << ' ' << d_socket << endl;
+    if (!d_conn) cerr << "D_CONN IS NULL" << endl;
     close();
   }
 

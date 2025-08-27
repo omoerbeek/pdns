@@ -528,7 +528,13 @@ public:
   void close() override
   {
     if (d_conn) {
-      SSL_shutdown(d_conn.get());
+      auto x = SSL_shutdown(d_conn.get());
+      cerr << "SSL_shutdown: " << this << ' ' << x << endl;
+      if (x == 0) {
+        char buf[128];
+        int res = SSL_read(d_conn.get(), buf, sizeof(buf));
+        cerr << "SSL_read after shutdown: " << this << ' ' << res << endl;
+      }
     }
   }
 

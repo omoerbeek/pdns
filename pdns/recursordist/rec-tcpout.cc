@@ -77,8 +77,10 @@ TCPOutConnectionManager::Connection TCPOutConnectionManager::get(const ComboAddr
 {
   if (d_idle_connections.count(ip) > 0) {
     auto h = d_idle_connections.extract(ip);
+    cerr << "TCPOutConnectionManager::get " << ip.toString() << " existing" << endl;
     return h.mapped();
   }
+    cerr << "TCPOutConnectionManager::get " << ip.toString() << " empty" << endl;
   return Connection{};
 }
 
