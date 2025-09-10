@@ -315,6 +315,7 @@ struct DoTStatus
   DNSName d_auth;
   time_t d_ttd;
   mutable uint64_t d_count{0};
+  mutable uint8_t d_errors{0};
   mutable Status d_status{Unknown};
   std::string toString() const
   {
@@ -1385,7 +1386,7 @@ uint64_t SyncRes::doDumpDoTProbeMap(int fileDesc)
     return 0;
   }
   fprintf(filePtr.get(), "; DoT probing map follows\n");
-  fprintf(filePtr.get(), "; ip\tdomain\tcount\tstatus\tttd\n");
+  fprintf(filePtr.get(), "; ip\tdomain\tcount\terror\tstatus\tttd\n");
   uint64_t count = 0;
 
   // We get a copy, so the I/O does not need to happen while holding the lock
@@ -1397,7 +1398,7 @@ uint64_t SyncRes::doDumpDoTProbeMap(int fileDesc)
   for (const auto& iter : copy.d_map) {
     count++;
     timebuf_t tmp;
-    fprintf(filePtr.get(), "%s\t%s\t%" PRIu64 "\t%s\t%s\n", iter.d_address.toString().c_str(), iter.d_auth.toString().c_str(), iter.d_count, iter.toString().c_str(), timestamp(iter.d_ttd, tmp));
+    fprintf(filePtr.get(), "%s\t%s\t%" PRIu64 "\t%d\t%s\t%s\n", iter.d_address.toString().c_str(), iter.d_auth.toString().c_str(), iter.d_count, iter.d_errors, iter.toString().c_str(), timestamp(iter.d_ttd, tmp));
   }
   return count;
 }
@@ -5314,17 +5315,42 @@ static bool shouldDoDoT(ComboAddress address, time_t now)
   return iter->d_status == DoTStatus::Good && iter->d_ttd > now;
 }
 
-static void updateDoTStatus(ComboAddress address, DoTStatus::Status status, time_t time, bool updateBusy = false)
+static void updateDoTStatus(ComboAddress address, bool isOK, bool fromProbe, time_t time)
 {
   address.setPort(853);
   auto lock = s_dotMap.lock();
-  auto iter = lock->d_map.find(address);
-  if (iter != lock->d_map.end()) {
-    iter->d_status = status;
-    lock->d_map.modify(iter, [=](DoTStatus& statusToModify) { statusToModify.d_ttd = time; });
-    if (updateBusy) {
-      --lock->d_numBusy;
+  if (auto iter = lock->d_map.find(address); iter != lock->d_map.end()) {
+    if (isOK) {
+      iter->d_errors = 0;
+      iter->d_status = DoTStatus::Good;
+      time += dotSuccessWait;
     }
+    else {
+      if (fromProbe) { // probe is final
+        iter->d_status = DoTStatus::Bad;
+        iter->d_errors = 0;
+      }
+      else {
+        // error during regular querying is not fatal immediately
+        if (iter->d_errors < 3) {
+          ++iter->d_errors;
+        }
+        if (iter->d_errors == 3) {
+          iter->d_status = DoTStatus::Bad;
+          iter->d_errors = 0;
+        }
+        else if (iter->d_status == DoTStatus::Busy || iter->d_status == DoTStatus::Unknown) {
+          // Bad remains Bad, Good remains Good. If we come from Busy or Unknown, mark it as
+          // good. The error count will take further action if needed. Can this happen?
+          iter->d_status = DoTStatus::Good;
+        }
+      }
+      time += dotFailWait;
+    }
+    lock->d_map.modify(iter, [=](DoTStatus& statusToModify) { statusToModify.d_ttd = time; });
+  }
+  if (fromProbe) {
+    --lock->d_numBusy;
   }
 }
 
@@ -5365,7 +5391,7 @@ bool SyncRes::tryDoT(const DNSName& qname, const QType qtype, const DNSName& nsN
   catch (...) {
     logHelper1("other");
   }
-  updateDoTStatus(address, isOK ? DoTStatus::Good : DoTStatus::Bad, now + (isOK ? dotSuccessWait : dotFailWait), true);
+  updateDoTStatus(address, isOK, true, now);
   return isOK;
 }
 
@@ -5993,8 +6019,7 @@ int SyncRes::doResolveAt(NsSet& nameservers, DNSName auth, bool flawedNSSet, con
 
           if (!gotAnswer) {
             if (doDoT && s_max_busy_dot_probes > 0) {
-              // This is quite pessimistic...
-              updateDoTStatus(*remoteIP, DoTStatus::Bad, d_now.tv_sec + dotFailWait);
+              updateDoTStatus(*remoteIP, false, false, d_now.tv_sec);
             }
             continue;
           }
@@ -6002,7 +6027,7 @@ int SyncRes::doResolveAt(NsSet& nameservers, DNSName auth, bool flawedNSSet, con
           LOG(prefix << qname << ": Got " << (unsigned int)lwr.d_records.size() << " answers from " << tns->first << " (" << remoteIP->toString() << "), rcode=" << lwr.d_rcode << " (" << RCode::to_s(lwr.d_rcode) << "), aa=" << lwr.d_aabit << ", in " << lwr.d_usec / 1000 << "ms" << endl);
 
           if (doDoT && s_max_busy_dot_probes > 0) {
-            updateDoTStatus(*remoteIP, DoTStatus::Good, d_now.tv_sec + dotSuccessWait);
+            updateDoTStatus(*remoteIP, true, false, d_now.tv_sec);
           }
           /*  // for you IPv6 fanatics :-)
               if(remoteIP->sin4.sin_family==AF_INET6)
