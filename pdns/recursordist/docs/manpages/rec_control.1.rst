@@ -85,6 +85,9 @@ clear-dont-throttle-names *NAME* [*NAME*...]
 clear-dont-throttle-netmasks *NETMASK* [*NETMASK*...]
     Remove netmasks that are not allowed to be throttled. If *NETMASK* is ``*``, remove all
 
+clear-dot-probe-entries [*IP*...]
+    Remove entries from DoT probe table. If *IP* is ``*``, remove all.
+
 clear-nta *DOMAIN*...
     Remove Negative Trust Anchor for one or more *DOMAIN*\ s. Set domain to
     ``*`` to remove all NTA's.

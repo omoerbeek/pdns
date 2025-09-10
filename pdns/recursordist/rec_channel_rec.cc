@@ -1893,6 +1893,7 @@ static RecursorControlChannel::Answer help()
           "clear-dont-throttle-names [N...] remove names that are not allowed to be throttled. If N is '*', remove all\n"
           "clear-dont-throttle-netmasks [N...]\n"
           "                                 remove netmasks that are not allowed to be throttled. If N is '*', remove all\n"
+          "clear-dot-probe-entries  clear entries from DoT probe table. If *IP* is ``*``, clear all.\n"
           "clear-nta [DOMAIN]...            Clear the Negative Trust Anchor for DOMAINs, if no DOMAIN is specified, remove all\n"
           "clear-ta [DOMAIN]...             Clear the Trust Anchor for DOMAINs\n"
           "dump-cache <filename> [type...]  dump cache contents to the named file, type is r, n, p or a\n"
@@ -2129,6 +2130,10 @@ RecursorControlChannel::Answer RecursorControlParser::getAnswer(int socket, cons
   }
   if (cmd == "dump-dot-probe-map") {
     return doDumpToFile(socket, pleaseDumpDoTProbeMap, cmd, false);
+  }
+  if (cmd == "clear-dot-probe-entries") {
+    auto count = SyncRes::clearDoTProbeMap(begin, end);
+    return {0, "Cleared " + std::to_string(count) + " entr" + addS(count, "y", "ies") + " from DoT probe table\n"};
   }
   if (cmd == "dump-ednsstatus" || cmd == "dump-edns") {
     return doDumpToFile(socket, pleaseDumpEDNSMap, cmd, false);
