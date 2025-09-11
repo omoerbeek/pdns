@@ -56,6 +56,8 @@ public:
     LuaPostResolveFFI = 110,
 
     AuthRequest = 120,
+    PacketParse = 121,
+    ProcessUDP = 122,
   };
 
   static const std::unordered_map<EventType, std::string> s_eventNames;
