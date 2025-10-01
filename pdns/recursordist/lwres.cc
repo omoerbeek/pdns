@@ -413,7 +413,7 @@ static bool tcpconnect(const OptLog& log, const ComboAddress& remote, const std:
 
   std::shared_ptr<TLSCtx> tlsCtx{nullptr};
   if (dnsOverTLS) {
-    tlsCtx = TCPOutConnectionManager::getTLSContext(nsName, remote);
+    tlsCtx = TCPOutConnectionManager::getTLSContext(nsName, remote, connection.d_verboseLogging);
     if (tlsCtx == nullptr) {
       g_slogout->info(Logr::Error, "DoT requested but not available", "server", Logging::Loggable(remote));
       dnsOverTLS = false;
@@ -423,12 +423,15 @@ static bool tcpconnect(const OptLog& log, const ComboAddress& remote, const std:
   connection.d_local = localBind;
   // Returned state ignored
   // This can throw an exception, retry will need to happen at higher level
+  cerr << "TRYCONNECT" << endl;
   connection.d_handler->tryConnect(SyncRes::s_tcp_fast_open_connect, remote);
+  cerr << "TRYCONNECT DONE" << endl;
   return true;
 }
 
 static LWResult::Result tcpsendrecv(const ComboAddress& ip, TCPOutConnectionManager::Connection& connection,
-                                    ComboAddress& localip, const vector<uint8_t>& vpacket, size_t& len, PacketBuffer& buf)
+                                    ComboAddress& localip, const vector<uint8_t>& vpacket, size_t& len, PacketBuffer& buf,
+                                    const std::string& nsName)
 {
   socklen_t slen = ip.getSocklen();
   uint16_t tlen = htons(vpacket.size());
@@ -447,8 +450,14 @@ static LWResult::Result tcpsendrecv(const ComboAddress& ip, TCPOutConnectionMana
 
   LWResult::Result ret = asendtcp(packet, connection.d_handler);
   if (ret != LWResult::Result::Success) {
-    auto result = connection.d_handler->getVerifyResult();
-    cerr << "ASENDTCP RETURNED FAIL " << ip.toString() << ' ' << result.first << ' ' << result.second << endl;
+    if (connection.d_handler->isTLS() && connection.d_verboseLogging) {
+      auto result = connection.d_handler->getVerifyResult();
+      g_slogout->info(Logr::Error, "Failed to setup TLS connection",
+                      "errorcode", Logging::Loggable(result.first),
+                      "remote", Logging::Loggable(ip),
+                      "nsname", Logging::Loggable(nsName),
+                      "tlsmessage", Logging::Loggable(result.second));
+    }
     return ret;
   }
 
@@ -721,7 +730,8 @@ static LWResult::Result asyncresolve(const OptLog& log, const ComboAddress& addr
         // *will* get a new connection, so this loop is not endless.
         isNew = true; // tcpconnect() might throw for new connections. In that case, we want to break the loop, scanbuild complains here, which is a false positive afaik
         isNew = tcpconnect(log, address, addressToBindTo, connection, dnsOverTLS, nsName);
-        ret = tcpsendrecv(address, connection, localip, vpacket, len, buf);
+        cerr << "Connect done" << endl;
+        ret = tcpsendrecv(address, connection, localip, vpacket, len, buf, nsName);
 #ifdef HAVE_FSTRM
         if (fstrmQEnabled) {
           logFstreamQuery(fstrmLoggers, queryTime, localip, address, !dnsOverTLS ? DnstapMessage::ProtocolType::DoTCP : DnstapMessage::ProtocolType::DoT, context.d_auth, vpacket);
@@ -738,10 +748,12 @@ static LWResult::Result asyncresolve(const OptLog& log, const ComboAddress& addr
         lock->erase(address);
         return LWResult::Result::BindError;
       }
-      catch (const NetworkError&) {
+      catch (const NetworkError& ex) {
+        cerr << "NetworkError " << ex.what() << endl;
         ret = LWResult::Result::OSLimitError; // OS limits error
       }
-      catch (const runtime_error&) {
+      catch (const runtime_error& ex) {
+        cerr << "runetime error " << ex.what() << endl;
         ret = LWResult::Result::OSLimitError; // OS limits error (PermanentError is transport related)
       }
     } while (!isNew);

@@ -2240,7 +2240,8 @@ static int serviceMain(Logr::log_t log)
   TCPOutConnectionManager::s_maxIdlePerAuth = ::arg().asNum("tcp-out-max-idle-per-auth");
   TCPOutConnectionManager::s_maxQueries = ::arg().asNum("tcp-out-max-queries");
   TCPOutConnectionManager::s_maxIdlePerThread = ::arg().asNum("tcp-out-max-idle-per-thread");
-
+  TCPOutConnectionManager::setupOutgoingTLSTables();
+  
   g_gettagNeedsEDNSOptions = ::arg().mustDo("gettag-needs-edns-options");
 
   s_statisticsInterval = ::arg().asNum("statistics-interval");
@@ -2282,7 +2283,7 @@ static int serviceMain(Logr::log_t log)
 
   checkOrFixFDS(listeningSockets, log);
   checkOrFixLinuxMapCountLimits(log);
-
+  
 #ifdef HAVE_LIBSODIUM
   if (sodium_init() == -1) {
     log->info(Logr::Error, "Unable to initialize sodium crypto library");

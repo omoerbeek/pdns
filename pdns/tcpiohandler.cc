@@ -1307,11 +1307,11 @@ public:
         return direction == 0 ? IOState::NeedRead : IOState::NeedWrite;
       }
       else if (gnutls_error_is_fatal(ret) || ret == GNUTLS_E_WARNING_ALERT_RECEIVED) {
-        throw std::runtime_error("Error establishing a new connection: " + std::string(gnutls_strerror(ret)));
+        throw std::runtime_error("Error establishing a new connection A: " + std::to_string(gnutls_error_is_fatal(ret)) + std::string(gnutls_strerror(ret)));
       }
     } while (ret == GNUTLS_E_INTERRUPTED);
 
-    throw std::runtime_error("Error establishing a new connection: " + std::string(gnutls_strerror(ret)));
+    throw std::runtime_error("Error establishing a new connection B: " + std::string(gnutls_strerror(ret)));
   }
 
   void connect(bool fastOpen, const ComboAddress& remote, const struct timeval& timeout) override
