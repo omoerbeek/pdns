@@ -594,6 +594,75 @@ static void apiServerTrustAnchorsDELETE(HttpRequest* req, HttpResponse* resp)
   throw ApiException("Deleting TA failed");
 }
 
+static void apiServerTrustAnchorsPOST(HttpRequest* req, HttpResponse* resp)
+{
+  if (checkDNSSECDisabled()) {
+    throw ApiException("DNSSEC is disabled");
+  }
+  const auto& document = req->json();
+  string domain;
+  string dsContent;
+
+  try {
+    domain = stringFromJson(document, "domain");
+  }
+  catch (const JsonException&) {
+    throw ApiException("domain is not specified or not a string");
+  }
+  try {
+    dsContent = stringFromJson(document, "content");
+  }
+  catch (const JsonException&) {
+    throw ApiException("content is not specified or not a string");
+  }
+  try {
+    DNSName name{domain};
+    auto dsRecord = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsContent));
+    g_luaconfs.modify([name, dsRecord](LuaConfigItems& lci) {
+      lci.dsAnchors[name].insert(*dsRecord);
+    });
+    wipeCaches(name, true, 0xffff);
+  }
+  catch (const std::exception& e) {
+    throw ApiException(e.what());
+  }
+  resp->status = 201;
+}
+
+static void apiServerNegativeTrustAnchorsPOST(HttpRequest* req, HttpResponse* resp)
+{
+  if (checkDNSSECDisabled()) {
+    throw ApiException("DNSSEC is disabled");
+  }
+  const auto& document = req->json();
+  string domain;
+  string why;
+
+  try {
+    domain = stringFromJson(document, "domain");
+  }
+  catch (const JsonException&) {
+    throw ApiException("domain is not specified or not a string");
+  }
+  try {
+    why = stringFromJson(document, "why");
+  }
+  catch (const JsonException&) {
+    throw ApiException("why is not specified or not a string");
+  }
+  try {
+    DNSName name{domain};
+    g_luaconfs.modify([name, why](LuaConfigItems& lci) {
+      lci.negAnchors[name] = why;
+    });
+    wipeCaches(name, true, 0xffff);
+  }
+  catch (const std::exception& e) {
+    throw ApiException(e.what());
+  }
+  resp->status = 201;
+}
+
 static void apiServerNegativeTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
 {
   // Return currently configured NTA's
@@ -1201,11 +1270,13 @@ WRAPPER(apiServerConfigAllowNotifyFromPUT)
 WRAPPER(apiServerDetail)
 WRAPPER(apiServerNegativeTrustAnchorsDELETE)
 WRAPPER(apiServerNegativeTrustAnchorsGET)
+WRAPPER(apiServerNegativeTrustAnchorsPOST)
 WRAPPER(apiServerRPZStats)
 WRAPPER(apiServerSearchData)
 WRAPPER(apiServerStatistics)
 WRAPPER(apiServerTrustAnchorsDELETE)
 WRAPPER(apiServerTrustAnchorsGET)
+WRAPPER(apiServerTrustAnchorsPOST)
 WRAPPER(apiServerZoneDetailDELETE)
 WRAPPER(apiServerZoneDetailGET)
 WRAPPER(apiServerZoneDetailPUT)

@@ -394,6 +394,9 @@ fn matcher(
         (&Method::GET, ["api", "v1", "servers", "localhost", "trustanchors"]) => {
             *apifunc = Some(rustweb::apiServerTrustAnchorsGET);
         }
+        (&Method::POST, ["api", "v1", "servers", "localhost", "trustanchors"]) => {
+            *apifunc = Some(rustweb::apiServerTrustAnchorsPOST);
+        }
         (&Method::DELETE, ["api", "v1", "servers", "localhost", "negativetrustanchors", id]) => {
             request.parameters.push(rustweb::KeyValue {
                 key: String::from("id"),
@@ -403,6 +406,9 @@ fn matcher(
         }
         (&Method::GET, ["api", "v1", "servers", "localhost", "negativetrustanchors"]) => {
             *apifunc = Some(rustweb::apiServerNegativeTrustAnchorsGET);
+        }
+        (&Method::POST, ["api", "v1", "servers", "localhost", "negativetrustanchors"]) => {
+            *apifunc = Some(rustweb::apiServerNegativeTrustAnchorsPOST);
         }
         (&Method::GET, ["api", "v1", "servers", "localhost", "zones"]) => {
             *apifunc = Some(rustweb::apiServerZonesGET)
@@ -1115,10 +1121,12 @@ mod rustweb {
         fn apiServerRPZStats(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerSearchData(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerStatistics(requst: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerNegativeTrustAnchorsPOST(requst: &Request, response: &mut Response) -> Result<()>;
         fn apiServerNegativeTrustAnchorsDELETE(requst: &Request, response: &mut Response) -> Result<()>;
         fn apiServerNegativeTrustAnchorsGET(requst: &Request, response: &mut Response) -> Result<()>;
         fn apiServerTrustAnchorsDELETE(requst: &Request, response: &mut Response) -> Result<()>;
         fn apiServerTrustAnchorsGET(requst: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerTrustAnchorsPOST(requst: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZoneDetailDELETE(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZoneDetailGET(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZoneDetailPUT(request: &Request, response: &mut Response) -> Result<()>;
