@@ -384,6 +384,12 @@ fn matcher(
             *allow_password = true;
             *apifunc = Some(rustweb::apiServerStatistics);
         }
+        (&Method::GET, ["api", "v1", "servers", "localhost", "trustanchors"]) => {
+            *apifunc = Some(rustweb::apiServerTrustAnchorsGET);
+        }
+        (&Method::GET, ["api", "v1", "servers", "localhost", "negativetrustanchors"]) => {
+            *apifunc = Some(rustweb::apiServerNegativeTrustAnchorsGET);
+        }
         (&Method::GET, ["api", "v1", "servers", "localhost", "zones"]) => {
             *apifunc = Some(rustweb::apiServerZonesGET)
         }
@@ -1095,6 +1101,8 @@ mod rustweb {
         fn apiServerRPZStats(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerSearchData(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerStatistics(requst: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerNegativeTrustAnchorsGET(requst: &Request, response: &mut Response) -> Result<()>;
+        fn apiServerTrustAnchorsGET(requst: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZoneDetailDELETE(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZoneDetailGET(request: &Request, response: &mut Response) -> Result<()>;
         fn apiServerZoneDetailPUT(request: &Request, response: &mut Response) -> Result<()>;
