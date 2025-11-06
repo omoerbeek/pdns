@@ -87,10 +87,12 @@ void apiServerConfigAllowFromPUT(const Request& rustRequest, Response& rustRespo
 void apiServerConfigAllowNotifyFromGET(const Request& rustRequest, Response& rustResponse);
 void apiServerConfigAllowNotifyFromPUT(const Request& rustRequest, Response& rustResponse);
 void apiServerDetail(const Request& rustRequest, Response& rustResponse);
+void apiServerNegativeTrustAnchorsDELETE(const Request& rustRequest, Response& rustResponse);
 void apiServerNegativeTrustAnchorsGET(const Request& rustRequest, Response& rustResponse);
 void apiServerRPZStats(const Request& rustRequest, Response& rustResponse);
 void apiServerSearchData(const Request& rustRequest, Response& rustResponse);
 void apiServerStatistics(const Request& rustRequest, Response& rustResponse);
+void apiServerTrustAnchorsDELETE(const Request& rustRequest, Response& rustResponse);
 void apiServerTrustAnchorsGET(const Request& rustRequest, Response& rustResponse);
 void apiServerZoneDetailDELETE(const Request& rustRequest, Response& rustResponse);
 void apiServerZoneDetailGET(const Request& rustRequest, Response& rustResponse);

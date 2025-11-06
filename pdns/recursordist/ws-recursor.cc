@@ -566,6 +566,34 @@ static void apiServerTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
   resp->setJsonBody(ret);
 }
 
+static void apiServerTrustAnchorsDELETE(HttpRequest* req, HttpResponse* resp)
+{
+  // Delete a specific TA
+  auto domain = req->parameters["id"];
+  if (domain.empty()) {
+    throw ApiException("id can't be blank");
+  }
+
+  if (!checkDNSSECDisabled()) {
+    DNSName entry{domain};
+    if (entry.isRoot()) {
+      throw ApiException("Refusing to remove root Trust Anchor");
+    }
+
+    size_t result{};
+    g_luaconfs.modify([entry, &result](LuaConfigItems& lci) {
+      result = lci.dsAnchors.erase(entry);
+    });
+    if (result > 0) {
+      wipeCaches(entry, true, 0xffff);
+      resp->body = "";
+      resp->status = 204; // No Content, but indicate success
+      return;
+    }
+  }
+  throw ApiException("Deleting TA failed");
+}
+
 static void apiServerNegativeTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
 {
   // Return currently configured NTA's
@@ -582,6 +610,30 @@ static void apiServerNegativeTrustAnchorsGET(HttpRequest* /* req */, HttpRespons
     }
   }
   resp->setJsonBody(ret);
+}
+
+static void apiServerNegativeTrustAnchorsDELETE(HttpRequest* req, HttpResponse* resp)
+{
+  // Delete a specific NTA
+  auto domain = req->parameters["id"];
+  if (domain.empty()) {
+    throw ApiException("id can't be blank");
+  }
+
+  if (!checkDNSSECDisabled()) {
+    DNSName entry{domain};
+    size_t result{};
+    g_luaconfs.modify([entry, &result](LuaConfigItems& lci) {
+      result = lci.negAnchors.erase(entry);
+    });
+    if (result > 0) {
+      wipeCaches(entry, true, 0xffff);
+      resp->body = "";
+      resp->status = 204; // No Content, but indicate success
+      return;
+    }
+  }
+  throw ApiException("Deleting NTA failed");
 }
 
 static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
@@ -1147,10 +1199,12 @@ WRAPPER(apiServerConfigAllowFromPUT)
 WRAPPER(apiServerConfigAllowNotifyFromGET)
 WRAPPER(apiServerConfigAllowNotifyFromPUT)
 WRAPPER(apiServerDetail)
+WRAPPER(apiServerNegativeTrustAnchorsDELETE)
 WRAPPER(apiServerNegativeTrustAnchorsGET)
 WRAPPER(apiServerRPZStats)
 WRAPPER(apiServerSearchData)
 WRAPPER(apiServerStatistics)
+WRAPPER(apiServerTrustAnchorsDELETE)
 WRAPPER(apiServerTrustAnchorsGET)
 WRAPPER(apiServerZoneDetailDELETE)
 WRAPPER(apiServerZoneDetailGET)
