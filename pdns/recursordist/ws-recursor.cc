@@ -543,6 +543,47 @@ static void apiServerRPZStats(HttpRequest* /* req */, HttpResponse* resp)
   resp->setJsonBody(ret);
 }
 
+static void apiServerTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
+{
+  // Return currently configured TA's
+  Json::array ret;
+
+  if (!checkDNSSECDisabled()) {
+    auto luaconf = g_luaconfs.getLocal();
+    for (const auto& anchor : luaconf->dsAnchors) {
+      Json::array dsRecords;
+      for (const auto& dsRecord : anchor.second) {
+        auto dsInfo = Json::object{{"content", dsRecord.getZoneRepresentation()}};
+        dsRecords.emplace_back(std::move(dsInfo));
+      }
+      Json::object taInfo = {
+        {"domain", anchor.first.toString()},
+        {"ds_records", dsRecords}
+      };
+      ret.emplace_back(std::move(taInfo));
+    }
+  }
+  resp->setJsonBody(ret);
+}
+
+static void apiServerNegativeTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
+{
+  // Return currently configured NTA's
+  Json::array ret;
+
+  if (!checkDNSSECDisabled()) {
+    auto luaconf = g_luaconfs.getLocal();
+    for (const auto& anchor : luaconf->negAnchors) {
+      Json::object ntaInfo = {
+        {"domain", anchor.first.toString()},
+        {"reason", anchor.second}
+      };
+      ret.emplace_back(std::move(ntaInfo));
+    }
+  }
+  resp->setJsonBody(ret);
+}
+
 static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
 {
   static MetricDefinitionStorage s_metricDefinitions;
@@ -1096,7 +1137,6 @@ namespace pdns::rust::web::rec
 #define WRAPPER(A) \
   void A(const Request& rustRequest, Response& rustResponse) { rustWrapper(::A, rustRequest, rustResponse); }
 
-WRAPPER(jsonstat)
 WRAPPER(apiDiscovery)
 WRAPPER(apiDiscoveryV1)
 WRAPPER(apiServer)
@@ -1107,15 +1147,17 @@ WRAPPER(apiServerConfigAllowFromPUT)
 WRAPPER(apiServerConfigAllowNotifyFromGET)
 WRAPPER(apiServerConfigAllowNotifyFromPUT)
 WRAPPER(apiServerDetail)
+WRAPPER(apiServerNegativeTrustAnchorsGET)
 WRAPPER(apiServerRPZStats)
 WRAPPER(apiServerSearchData)
 WRAPPER(apiServerStatistics)
+WRAPPER(apiServerTrustAnchorsGET)
 WRAPPER(apiServerZoneDetailDELETE)
 WRAPPER(apiServerZoneDetailGET)
 WRAPPER(apiServerZoneDetailPUT)
 WRAPPER(apiServerZonesGET)
 WRAPPER(apiServerZonesPOST)
+WRAPPER(jsonstat)
 WRAPPER(prometheusMetrics)
 WRAPPER(serveStuff)
-
 }
