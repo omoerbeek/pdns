@@ -114,6 +114,71 @@ using rpzOptions_t = std::unordered_map<std::string, boost::variant<bool, uint32
 class LuaConfigItems
 {
 public:
+  struct NTAInfo
+  {
+  public:
+    void clear()
+    {
+      d_staticConfig.clear();
+      d_runtimeMods.clear();
+      d_mergedConfig.clear();
+    }
+    void insertStatic(const DNSName& who, const std::string& why)
+    {
+      d_staticConfig[who] = why;
+      recompute();
+    }
+    void insertRuntime(const DNSName& who, const std::string& why)
+    {
+      d_runtimeMods[who] = why;
+      recompute();
+    }
+    void clearRuntime(const DNSName& who, bool runtime)
+    {
+      if (runtime) {
+        d_runtimeMods.erase(who);
+      }
+      else {
+        d_runtimeMods[who] = true;
+      }
+      recompute();
+    }
+    void clearAll(bool runtime)
+    {
+      d_runtimeMods.clear();
+      d_allCleared = !runtime;
+      recompute();
+    }
+
+    void recompute()
+    {
+      std::map<DNSName, std::string> merged;
+      if (!d_allCleared) {
+        merged = d_staticConfig;
+      }
+      for (const auto& [name, mod] : d_runtimeMods) {
+        if (std::holds_alternative<bool>(mod)) {
+          merged.erase(name);
+        }
+        else {
+          merged[name] = std::get<std::string>(mod);
+        }
+      }
+      d_mergedConfig = merged;
+    }
+
+    [[nodiscard]] const std::map<DNSName, std::string>& getMerged() const
+    {
+      return d_mergedConfig;
+    }
+
+  private:
+    std::map<DNSName, std::string> d_staticConfig;
+    std::map<DNSName, std::variant<std::string, bool>> d_runtimeMods;
+    std::map<DNSName, std::string> d_mergedConfig;
+    bool d_allCleared{false};
+  };
+
   LuaConfigItems();
   SortList sortlist;
   DNSFilterEngine dfe;
@@ -121,7 +186,7 @@ public:
   vector<FWCatalogZone> catalogzones;
   TrustAnchorFileInfo trustAnchorFileInfo; // Used to update the Trust Anchors from file periodically
   map<DNSName, dsset_t> dsAnchors;
-  map<DNSName, std::string> negAnchors;
+  NTAInfo d_ntas;
   map<DNSName, RecZoneToCache::Config> ztcConfigs;
   std::map<QType, std::pair<std::set<QType>, AdditionalMode>> allowAdditionalQTypes;
   ProtobufExportConfig protobufExportConfig;

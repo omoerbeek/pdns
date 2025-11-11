@@ -779,7 +779,7 @@ static Answer doAddNTA(ArgIterator begin, ArgIterator end)
   }
   g_log << Logger::Warning << "Adding Negative Trust Anchor for " << who << " with reason '" << why << "', requested via control channel" << endl;
   g_luaconfs.modify([who, why](LuaConfigItems& lci) {
-    lci.negAnchors[who] = why;
+    lci.d_ntas.insertRuntime(who, why);
   });
   try {
     wipeCaches(who, true, 0xffff);
@@ -799,10 +799,17 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
   if (begin == end) {
     return {1, "No Negative Trust Anchor specified, doing nothing.\n"};
   }
+
+  bool runtime = false;
+  cerr << *begin << endl;
+  if (*begin == "@") {
+    ++begin;
+    runtime = true;
+  }
   if (begin + 1 == end && *begin == "*") {
-    g_log << Logger::Warning << "Clearing all Negative Trust Anchors, requested via control channel" << endl;
-    g_luaconfs.modify([](LuaConfigItems& lci) {
-      lci.negAnchors.clear();
+    g_log << Logger::Warning << "Clearing all Negative Trust Anchors, requested via control channel; runtime: " << runtime << endl;
+    g_luaconfs.modify([runtime](LuaConfigItems& lci) {
+      lci.d_ntas.clearAll(runtime);
     });
     return {0, "Cleared all Negative Trust Anchors.\n"};
   }
@@ -830,9 +837,9 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
   bool first(true);
   try {
     for (auto const& entry : toRemove) {
-      g_log << Logger::Warning << "Clearing Negative Trust Anchor for " << entry << ", requested via control channel" << endl;
-      g_luaconfs.modify([entry](LuaConfigItems& lci) {
-        lci.negAnchors.erase(entry);
+      g_log << Logger::Warning << "Clearing Negative Trust Anchor for " << entry << ", requested via control channel; runtime: " << runtime << endl;
+      g_luaconfs.modify([entry,runtime](LuaConfigItems& lci) {
+        lci.d_ntas.clearRuntime(entry, runtime);
       });
       wipeCaches(entry, true, 0xffff);
       if (!first) {
@@ -857,7 +864,7 @@ static Answer getNTAs(ArgIterator /* begin */, ArgIterator /* end */)
   }
   string ret("Configured Negative Trust Anchors:\n");
   auto luaconf = g_luaconfs.getLocal();
-  for (const auto& negAnchor : luaconf->negAnchors) {
+  for (const auto& negAnchor : luaconf->d_ntas.getMerged()) {
     ret += negAnchor.first.toLogString() + "\t" + negAnchor.second + "\n";
   }
   return {0, std::move(ret)};

@@ -653,7 +653,7 @@ static void apiServerNegativeTrustAnchorsPOST(HttpRequest* req, HttpResponse* re
   try {
     DNSName name{domain};
     g_luaconfs.modify([name, why](LuaConfigItems& lci) {
-      lci.negAnchors[name] = why;
+      lci.d_ntas.insertRuntime(name, why);
     });
     wipeCaches(name, true, 0xffff);
   }
@@ -670,7 +670,7 @@ static void apiServerNegativeTrustAnchorsGET(HttpRequest* /* req */, HttpRespons
 
   if (!checkDNSSECDisabled()) {
     auto luaconf = g_luaconfs.getLocal();
-    for (const auto& anchor : luaconf->negAnchors) {
+    for (const auto& anchor : luaconf->d_ntas.getMerged()) {
       Json::object ntaInfo = {
         {"domain", anchor.first.toString()},
         {"reason", anchor.second}
@@ -688,19 +688,19 @@ static void apiServerNegativeTrustAnchorsDELETE(HttpRequest* req, HttpResponse* 
   if (domain.empty()) {
     throw ApiException("id can't be blank");
   }
-
+  bool runtime = false;
+  if (!req->parameters["runtimemod"].empty()) {
+    runtime = true;
+  }
   if (!checkDNSSECDisabled()) {
     DNSName entry{domain};
-    size_t result{};
-    g_luaconfs.modify([entry, &result](LuaConfigItems& lci) {
-      result = lci.negAnchors.erase(entry);
+    g_luaconfs.modify([entry,runtime](LuaConfigItems& lci) {
+      lci.d_ntas.clearRuntime(entry, runtime);
     });
-    if (result > 0) {
-      wipeCaches(entry, true, 0xffff);
-      resp->body = "";
-      resp->status = 204; // No Content, but indicate success
-      return;
-    }
+    wipeCaches(entry, true, 0xffff);
+    resp->body = "";
+    resp->status = 204; // No Content, but indicate success
+    return;
   }
   throw ApiException("Deleting NTA failed");
 }

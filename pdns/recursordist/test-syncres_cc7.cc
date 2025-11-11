@@ -1243,7 +1243,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_nta)
   luaconfsCopy.dsAnchors.clear();
   generateKeyMaterial(g_rootdnsname, DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys, luaconfsCopy.dsAnchors);
   /* Add a NTA for "." */
-  luaconfsCopy.negAnchors[g_rootdnsname] = "NTA for Root";
+  luaconfsCopy.d_ntas.insertStatic(g_rootdnsname, "NTA for Root");
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;

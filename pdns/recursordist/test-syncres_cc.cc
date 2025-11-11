@@ -212,7 +212,7 @@ void initSR(bool debug)
     auto ds = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsRecord));
     luaconfsCopy.dsAnchors[g_rootdnsname].insert(*ds);
   }
-  luaconfsCopy.negAnchors.clear();
+  luaconfsCopy.d_ntas.clear();
   g_luaconfs.setState(luaconfsCopy);
 
   g_dnssecmode = DNSSECMode::Off;

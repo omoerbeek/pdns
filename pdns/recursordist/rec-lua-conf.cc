@@ -566,19 +566,19 @@ void loadRecursorLuaConfig(const std::string& fname, ProxyMapping& proxyMapping,
 
   Lua->writeFunction("addNTA", [&lci](const std::string& who, boost::optional<std::string> why) {
     if (why) {
-      lci.negAnchors[DNSName(who)] = static_cast<string>(*why);
+      lci.d_ntas.insertStatic(DNSName(who), *why);
     }
     else {
-      lci.negAnchors[DNSName(who)] = "";
+      lci.d_ntas.insertStatic(DNSName(who), "");
     }
   });
 
   Lua->writeFunction("clearNTA", [&lci](boost::optional<string> who) {
     if (who) {
-      lci.negAnchors.erase(DNSName(*who));
+      lci.d_ntas.clearRuntime(DNSName(*who), false);
     }
     else {
-      lci.negAnchors.clear();
+      lci.d_ntas.clearAll(false);
     }
   });
 

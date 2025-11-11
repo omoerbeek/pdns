@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_secure_with_nta)
   generateKeyMaterial(DNSName("powerdns.com."), DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys);
 
   /* Add a NTA for "powerdns.com" */
-  luaconfsCopy.negAnchors[target] = "NTA for PowerDNS.com";
+  luaconfsCopy.d_ntas.insertStatic(target, "NTA for PowerDNS.com");
 
   g_luaconfs.setState(luaconfsCopy);
 
@@ -561,7 +561,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_bogus_with_nta)
   generateKeyMaterial(DNSName("powerdns.com."), DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys);
 
   /* Add a NTA for "powerdns.com" */
-  luaconfsCopy.negAnchors[target] = "NTA for PowerDNS.com";
+  luaconfsCopy.d_ntas.insertStatic(target, "NTA for PowerDNS.com");
 
   g_luaconfs.setState(luaconfsCopy);
 

@@ -3514,7 +3514,7 @@ void activateLuaConfig(LuaConfigItems& lci)
   if (lci.dsAnchors.size() > rootDSs.size()) {
     warnIfDNSSECDisabled("Warning: adding Trust Anchor for DNSSEC, but dnssec is set to 'off'!");
   }
-  if (!lci.negAnchors.empty()) {
+  if (!lci.d_ntas.getMerged().empty()) {
     warnIfDNSSECDisabled("Warning: adding Negative Trust Anchor for DNSSEC, but dnssec is set to 'off'!");
   }
   activateRPZs(lci);
