@@ -780,7 +780,7 @@ static Answer doAddNTA(ArgIterator begin, ArgIterator end)
   }
   g_log << Logger::Warning << "Adding Negative Trust Anchor for " << who << " with reason '" << why << "', requested via control channel" << endl;
   g_luaconfs.modify([who, why](LuaConfigItems& lci) {
-    lci.negAnchors[who] = why;
+    lci.d_ntas.insertRuntime(who, why);
   });
   try {
     wipeCaches(who, true, 0xffff);
@@ -800,10 +800,12 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
   if (begin == end) {
     return {1, "No Negative Trust Anchor specified, doing nothing.\n"};
   }
+
+  cerr << *begin << endl;
   if (begin + 1 == end && *begin == "*") {
     g_log << Logger::Warning << "Clearing all Negative Trust Anchors, requested via control channel" << endl;
     g_luaconfs.modify([](LuaConfigItems& lci) {
-      lci.negAnchors.clear();
+      lci.d_ntas.clearAll();
     });
     return {0, "Cleared all Negative Trust Anchors.\n"};
   }
@@ -833,7 +835,7 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
     for (auto const& entry : toRemove) {
       g_log << Logger::Warning << "Clearing Negative Trust Anchor for " << entry << ", requested via control channel" << endl;
       g_luaconfs.modify([entry](LuaConfigItems& lci) {
-        lci.negAnchors.erase(entry);
+        lci.d_ntas.clearRuntime(entry);
       });
       wipeCaches(entry, true, 0xffff);
       if (!first) {
@@ -858,7 +860,7 @@ static Answer getNTAs(ArgIterator /* begin */, ArgIterator /* end */)
   }
   string ret("Configured Negative Trust Anchors:\n");
   auto luaconf = g_luaconfs.getLocal();
-  for (const auto& negAnchor : luaconf->negAnchors) {
+  for (const auto& negAnchor : luaconf->d_ntas.getMerged()) {
     ret += negAnchor.first.toLogString() + "\t" + negAnchor.second + "\n";
   }
   return {0, std::move(ret)};
@@ -2080,7 +2082,7 @@ static RecursorControlChannel::Answer help(ArgIterator /* begin */, ArgIterator 
   return {0, str.str()};
 }
 
-RecursorControlChannel::Answer luaconfig(bool broadcast)
+RecursorControlChannel::Answer luaconfig(bool broadcast, bool reset)
 {
   ProxyMapping proxyMapping;
   LuaConfigItems lci;
@@ -2128,6 +2130,9 @@ RecursorControlChannel::Answer luaconfig(bool broadcast)
     }
     auto generation = g_luaconfs.getLocal()->generation;
     lci.generation = generation + 1;
+    if (!reset) {
+      lci.setRuntimeKeepers(*g_luaconfs.getLocal());
+    }
     OpenTelemetryTraceConditions conditions;
     pdns::settings::rec::fromBridgeStructToLuaConfig(settings, lci, proxyMapping, conditions);
     activateLuaConfig(lci);
@@ -2157,13 +2162,19 @@ RecursorControlChannel::Answer luaconfig(bool broadcast)
 
 static RecursorControlChannel::Answer luaconfig1(ArgIterator begin, ArgIterator end)
 {
+  bool reset = false;
   if (begin != end) {
-    if (g_luaSettingsInYAML) {
-      return {1, "Unable to reload Lua script from '" + *begin + "' as there is no active Lua configuration\n"};
+    if (*begin == "reset") {
+      reset = true;
     }
-    ::arg().set("lua-config-file") = *begin;
+    else {
+      if (g_luaSettingsInYAML) {
+        return {1, "Unable to reload Lua config from '" + *begin + "' as there is no active Lua configuration\n"};
+      }
+      ::arg().set("lua-config-file") = *begin;
+    }
   }
-  return luaconfig(true);
+  return luaconfig(true, reset);
 }
 
 static RecursorControlChannel::Answer reloadACLs(ArgIterator /* begin */, ArgIterator /* end */)

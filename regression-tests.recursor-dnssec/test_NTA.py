@@ -1,4 +1,8 @@
 import dns
+import json
+import os
+import requests
+import urllib
 from recursortests import RecursorTest
 
 class NTATest(RecursorTest):
@@ -43,3 +47,94 @@ addTA('secure.optout.example', '64215 13 1 b88284d7a8d8605c398e8942262f97b9a5a31
 
         self.assertMessageHasFlags(res, ['QR', 'RA', 'RD'], ['DO'])
         self.assertRcodeEqual(res, dns.rcode.NOERROR)
+
+class NTARESTTest(RecursorTest):
+    _confdir = 'NTAREST'
+    _wsPort = 8042
+    _wsTimeout = 2
+    _wsPassword = 'secretpassword'
+    _apiKey = 'secretapikey'
+
+    _config_template = """
+dnssec:
+    validation: validate
+    negative_trustanchors:
+    - name: bogus.example
+    - name: secure.optout.example
+      reason: 'With a reason'
+
+webservice:
+    loglevel: detailed
+    webserver: true
+    port: %d
+    address: 127.0.0.1
+    password: %s
+    allow_from: [127.0.0.1]
+    api_key: %s
+""" % (_wsPort, _wsPassword, _apiKey)
+
+    @classmethod
+    def generateRecursorConfig(cls, confdir):
+        super(NTARESTTest, cls).generateRecursorYamlConfig(confdir, False)
+
+    def getNTAs(self):
+        headers = {'x-api-key': self._apiKey}
+        url = 'http://127.0.0.1:' + str(self._wsPort) + '/api/v1/servers/localhost/negativetrustanchors'
+        r = requests.get(url, headers=headers, timeout=self._wsTimeout)
+        self.assertTrue(r)
+        self.assertEqual(r.status_code, 200)
+        content = r.json()
+        return content
+
+    def addNTA(self, name, reason):
+        headers = {'x-api-key': self._apiKey, 'content-type': 'application/json'}
+        data = {
+            #'domain': urllib.parse.quote_plus(name),
+            'domain': name,
+            'why': reason
+        }
+        url = 'http://127.0.0.1:' + str(self._wsPort) + '/api/v1/servers/localhost/negativetrustanchors';
+        r = requests.post(url, headers=headers, data=json.dumps(data), timeout=self._wsTimeout)
+        self.assertTrue(r)
+        self.assertEqual(r.status_code, 201)
+        return r
+
+    def delNTA(self, name):
+        headers = {'x-api-key': self._apiKey,
+                   'id': name}
+        url = 'http://127.0.0.1:' + str(self._wsPort) + '/api/v1/servers/localhost/negativetrustanchors/' + name;
+        r = requests.delete(url, headers=headers, timeout=self._wsTimeout)
+        self.assertTrue(r)
+        self.assertEqual(r.status_code, 204)
+        return r
+
+    def testModAndRestart(self):
+        confdir = os.path.join('configs', self._confdir)
+        self.waitForTCPSocket("127.0.0.1", self._wsPort)
+        content = self.getNTAs()
+        self.assertEqual(len(content), 2)
+        self.delNTA('secure.optout.example')
+        self.delNTA('bogus.example')
+        content = self.getNTAs()
+        self.assertEqual(len(content), 0)
+        self.addNTA('=secure.optout.example.', 'reason')
+        content = self.getNTAs()
+        self.assertEqual(len(content), 1)
+        nta = content[0]
+        self.assertIn('domain', nta)
+        self.assertIn('reason', nta)
+        self.assertEqual(nta['domain'], '=3Dsecure.optout.example.')
+        self.recControl(confdir, 'reload-yaml')
+        content = self.getNTAs()
+        self.assertEqual(len(content), 1)
+        nta = content[0]
+        self.assertIn('domain', nta)
+        self.assertIn('reason', nta)
+        self.assertEqual(nta['domain'], '=3Dsecure.optout.example.')
+        self.recControl(confdir, 'reload-yaml reset')
+        content = self.getNTAs()
+        self.assertEqual(len(content), 2) # the two from config
+        nta = content[0]
+        self.assertIn('domain', nta)
+        self.assertIn('reason', nta)
+        self.assertEqual(nta['domain'], 'bogus.example.') # we know it's a (sorted) map

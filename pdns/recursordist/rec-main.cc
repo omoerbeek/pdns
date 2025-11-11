@@ -2128,7 +2128,7 @@ static int serviceMain(Logr::log_t log)
   }
   g_maxCacheEntries = ::arg().asNum("max-cache-entries");
 
-  auto luaResult = luaconfig(false);
+  auto luaResult = luaconfig(false, true);
   if (luaResult.d_ret != 0) {
     log->error(Logr::Error, luaResult.d_str, "Cannot load Lua or equivalent YAML configuration");
     return 1;
@@ -3513,7 +3513,8 @@ void activateLuaConfig(LuaConfigItems& lci)
   if (lci.dsAnchors.size() > rootDSs.size()) {
     warnIfDNSSECDisabled("Warning: adding Trust Anchor for DNSSEC, but dnssec is set to 'off'!");
   }
-  if (!lci.negAnchors.empty()) {
+  cerr << "lci.d_ntas: " << lci.d_ntas.toString();
+  if (!lci.d_ntas.getMerged().empty()) {
     warnIfDNSSECDisabled("Warning: adding Negative Trust Anchor for DNSSEC, but dnssec is set to 'off'!");
   }
   activateRPZs(lci);

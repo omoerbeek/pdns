@@ -117,12 +117,51 @@ Set :ref:`setting-yaml-dnssec.trustanchorfile` to this path to use these trust a
 Any root trust anchor in this file will override the built-in root trust anchors.
 
 .. note::
-  When using a trust anchor file, any runtime changes to Trust Anchors (see below) will be overwritten when the file is refreshed.
+  Before version 5.4.0, when using a trust anchor file, any runtime changes to Trust Anchors (see below) will be overwritten when the file is refreshed.
   To prevent this, set the :ref:`setting-yaml-dnssec.trustanchorfile_interval` parameter to ``0``.
   This will **disable** automatic reloading of the file.
 
-Runtime Configuration of Trust Anchors
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Configuration of Trust Anchors since version 5.4.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Since version 5.4.0, the management of trust anchors has been made more versaile.
+See the `Runtime Configuration of Trust Anchors before version 5.4.0`_ for the semantics of the old trust anchor management.
+
+Several categories of trust anchors are defined:
+
+1. The built-in root trust anchors.
+2. The trust anchors defined in either Lua settings or YAML settings files.
+3. The trust anchors defined in the periodically read trust anchor file defined by :ref:`setting-yaml-dnssec.trustanchorfile`.
+4. The trust anchors run-time defined (or cleared) by either ``rec_control add-ta``, ``rec_control clear-ta`` or use of the REST API.
+
+The final trust anchor set used in a merge of the 4 categories defined above. While merging, new trust anchors using the same zone will result in multiple DS records for that zone, except for the root zone where a merge will replace the existing set.
+
+When :program:`Recursor` starts, it reads the categories 1, 2 and 3, if defined.
+Dynamically added trust anchors in category 4 will be added to the set used.
+
+When *clearing* a trust anchor by using ``rec_control clear-ta`` or the corresponding REST call the mentioned trust anchor will not be used anymore.
+It is still possible to add a trust anchors for a specific zone following clearing it for the same zone; after the following commands:
+
+::
+
+   $ rec_control clear-ta example.com
+   $ rec_control add-ta example.com 63149 13 1 a59da3f5c1b97fcd5fa2b3b2b0ac91d38a60d33a
+
+trust anchors from the settings files will not be used anymore for ``example.com``,
+but the dynamically added trust anchor with the second ``rec_control`` command will be used.
+
+When the periodically read trust anchor file is reread, the resulting trust anchor set will be a merge of category 1, 2 and 3 *plus* the dynamically issued modifications of category 4.
+
+On reload of the config using ``rec_control reload-yaml`` the merged list wil be rebuilt using all 4 categories, so including the trust anchors in category 3 and the dynamically added trust anchors (or clearing of them).
+
+On restart, only the categories 1, 2 and 3 will be processed initially.
+
+For negative trust anchors, a similar merge is done, except that negative trust anchors have no category 3 and it is not possible add a negative trust anchor for the root zone.
+
+Runtime Configuration of Trust Anchors before version 5.4.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Since version 5.4.0, the management of trust anchors has been made more versaile.
+See the `Configuration of Trust Anchors since version 5.4.0`_ for the semantics of the new trust anchor management.
+
 To change or add trust anchors at runtime, use the :doc:`manpages/rec_control.1` tool.
 These runtime settings are not saved to disk.
 To make them permanent, they should be added to the settings as described above.
@@ -163,7 +202,7 @@ Note that it is good practice to verify that this is indeed the case and not bec
 Current negative trust anchors can be queried from the recursor by sending a query for "negativetrustanchor.server CH TXT".
 This query will (if :ref:`setting-yaml-recursor.allow_trust_anchor_query` is enabled) return a TXT record per negative trust-anchor in the format ``"DOMAIN [REASON]"``.
 
-To configure a negative trust anchor, use the :ref:`setting-yaml-dnssec.negative_trustanchors` and restart the recursor.
+To permanently configure a negative trust anchor, use the :ref:`setting-yaml-dnssec.negative_trustanchors` and restart the recursor.
 The NTA entries require the name of the zone and an optional reason:
 
 .. code-block:: yaml
@@ -176,8 +215,10 @@ The NTA entries require the name of the zone and an optional reason:
 Runtime Configuration of Negative Trust Anchors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :doc:`manpages/rec_control.1` command can be used to manage the negative trust anchors of a running instance.
+The :doc:`manpages/rec_control.1` command or the REST API can be used to manage the negative trust anchors of a running instance.
 These runtime settings are lost when restarting the recursor, more permanent NTAs should be added to the :ref:`setting-yaml-recursor.lua_config_file` with ``addNTA()`` or to :ref:`setting-yaml-dnssec.negative_trustanchors`.
+
+Since 5.4.0, runtime modifications to the NTA list are re-applied after issuing a ``rec_control reload-yaml`` command.
 
 Adding a negative trust anchor is done with the ``add-nta`` command (that optionally accepts a reason):
 
@@ -202,4 +243,4 @@ To remove negative trust anchor(s), run ``clear-nta``:
     $ rec_control clear-nta subdomain.example
     Removed Negative Trust Anchors for subdomain.example
 
-``clear-nta`` accepts multiple domain-names and accepts '\*' (beware the shell quoting) to remove all negative trust anchors.
+``clear-nta`` accepts multiple domain-names and accepts ``\*`` (beware the shell quoting) to remove all negative trust anchors.

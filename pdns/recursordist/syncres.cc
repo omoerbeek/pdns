@@ -794,7 +794,7 @@ bool SyncRes::doSpecialNamesResolve(const DNSName& qname, const QType qtype, con
     handled = true;
     if (qtype == QType::TXT || qtype == QType::ANY) {
       auto luaLocal = g_luaconfs.getLocal();
-      for (auto const& negAnchor : luaLocal->negAnchors) {
+      for (auto const& negAnchor : luaLocal->d_ntas.getMerged()) {
         ostringstream ans;
         ans << "\"";
         ans << negAnchor.first.toString(); // Explicit toString to have a trailing dot
@@ -3596,7 +3596,7 @@ vState SyncRes::getTA(const DNSName& zone, dsset_t& dsSet, const string& prefix)
   }
 
   std::string reason;
-  if (haveNegativeTrustAnchor(luaLocal->negAnchors, zone, reason)) {
+  if (haveNegativeTrustAnchor(luaLocal->d_ntas.getMerged(), zone, reason)) {
     LOG(prefix << zone << ": Got NTA" << endl);
     return vState::NTA;
   }

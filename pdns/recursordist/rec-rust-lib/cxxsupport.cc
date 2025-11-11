@@ -767,7 +767,7 @@ void fromLuaToRust(const LuaConfigItems& luaConfig, pdns::rust::settings::rec::D
       dnssec.trustanchors.emplace_back(trustAnchor);
     }
   }
-  for (const auto& anchors : luaConfig.negAnchors) {
+  for (const auto& anchors : luaConfig.d_ntas.getMerged()) {
     pdns::rust::settings::rec::NegativeTrustAnchor negtrustAnchor{anchors.first.toString(), anchors.second};
     dnssec.negative_trustanchors.emplace_back(negtrustAnchor);
   }
@@ -1118,7 +1118,7 @@ void fromRustToLuaConfig(const pdns::rust::settings::rec::Dnssec& dnssec, LuaCon
     }
   }
   for (const auto& nta : dnssec.negative_trustanchors) {
-    luaConfig.negAnchors[DNSName(std::string(nta.name))] = std::string(nta.reason);
+    luaConfig.d_ntas.insertStatic(DNSName(std::string(nta.name)), std::string(nta.reason));
   }
   luaConfig.trustAnchorFileInfo.fname = std::string(dnssec.trustanchorfile);
   luaConfig.trustAnchorFileInfo.interval = dnssec.trustanchorfile_interval;

@@ -566,19 +566,19 @@ void loadRecursorLuaConfig(const std::string& fname, ProxyMapping& proxyMapping,
 
   Lua->writeFunction("addNTA", [&lci](const std::string& who, std::optional<std::string> why) {
     if (why) {
-      lci.negAnchors[DNSName(who)] = static_cast<string>(*why);
+      lci.d_ntas.insertStatic(DNSName(who), *why);
     }
     else {
-      lci.negAnchors[DNSName(who)] = "";
+      lci.d_ntas.insertStatic(DNSName(who), "");
     }
   });
 
   Lua->writeFunction("clearNTA", [&lci](std::optional<string> who) {
     if (who) {
-      lci.negAnchors.erase(DNSName(*who));
+      lci.d_ntas.clearRuntime(DNSName(*who));
     }
     else {
-      lci.negAnchors.clear();
+      lci.d_ntas.clearAll();
     }
   });
 
@@ -809,4 +809,9 @@ void loadRecursorLuaConfig(const std::string& fname, ProxyMapping& proxyMapping,
     lci.d_slog->error(Logr::Error, err.what(),  "Unable to load Lua script", "file", Logging::Loggable(fname), "exception", Logging::Loggable("std::exception"));
     throw;
   }
+}
+
+void LuaConfigItems::setRuntimeKeepers(const LuaConfigItems& old)
+{
+  d_ntas.setRuntimeKeepers(old.d_ntas);
 }

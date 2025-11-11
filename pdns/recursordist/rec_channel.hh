@@ -151,4 +151,4 @@ void registerAllStats();
 
 void doExitNicely();
 RecursorControlChannel::Answer doQueueReloadLuaScript(vector<string>::const_iterator begin, vector<string>::const_iterator end);
-RecursorControlChannel::Answer luaconfig(bool broadcast);
+RecursorControlChannel::Answer luaconfig(bool broadcast, bool reset);
