@@ -754,7 +754,7 @@ void fromLuaToRust(const LuaConfigItems& luaConfig, pdns::rust::settings::rec::D
   dnssec.trustanchorfile = luaConfig.trustAnchorFileInfo.fname;
   dnssec.trustanchorfile_interval = luaConfig.trustAnchorFileInfo.interval;
   dnssec.trustanchors.clear();
-  for (const auto& anchors : luaConfig.dsAnchors) {
+  for (const auto& anchors : luaConfig.dsAnchors.getMerged()) {
     ::rust::Vec<::rust::String> dsRecords;
     for (const auto& dsRecord : anchors.second) {
       const auto dsString = dsRecord.getZoneRepresentation();
@@ -1108,13 +1108,14 @@ void fromRustToLuaConfig(const pdns::rust::settings::rec::Dnssec& dnssec, LuaCon
   // as the luaConfig only contains the root TAs, this is equivalent (but not *very* efficient).
   for (const auto& trustAnchor : dnssec.trustanchors) {
     auto name = DNSName(std::string(trustAnchor.name));
-    luaConfig.dsAnchors.erase(name);
+    luaConfig.dsAnchors.clearStatic(name);
   }
   for (const auto& trustAnchor : dnssec.trustanchors) {
     auto name = DNSName(std::string(trustAnchor.name));
     for (const auto& dsRecord : trustAnchor.dsrecords) {
       auto dsRecContent = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(std::string(dsRecord)));
-      luaConfig.dsAnchors[name].emplace(*dsRecContent);
+      luaConfig.dsAnchors.insertStatic(name, *dsRecContent);
+      //luaConfig.dsAnchors[name].emplace(*dsRecContent);
     }
   }
   for (const auto& nta : dnssec.negative_trustanchors) {

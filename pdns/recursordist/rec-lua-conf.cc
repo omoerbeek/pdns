@@ -56,7 +56,7 @@ LuaConfigItems::LuaConfigItems()
   DNSName root("."); // don't use g_rootdnsname here, it might not exist yet
   for (const auto& dsRecord : rootDSs) {
     auto dsRecContent = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsRecord));
-    dsAnchors[root].emplace(*dsRecContent);
+    dsAnchors.insertStatic(root, *dsRecContent);
   }
 }
 
@@ -552,12 +552,12 @@ void loadRecursorLuaConfig(const std::string& fname, ProxyMapping& proxyMapping,
   Lua->writeFunction("addTA", [&lci](const std::string& who, const std::string& what) {
     DNSName zone(who);
     auto dsRecordContent = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(what));
-    lci.dsAnchors[zone].insert(*dsRecordContent);
+    lci.dsAnchors.insertRuntime(zone, *dsRecordContent);
   });
 
   Lua->writeFunction("clearTA", [&lci](std::optional<string> who) {
     if (who) {
-      lci.dsAnchors.erase(DNSName(*who));
+      lci.dsAnchors.clearRuntime(DNSName(*who));
     }
     else {
       lci.dsAnchors.clear();

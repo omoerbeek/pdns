@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_insecure_to_ta_skipped_cut)
   /* No key material for .com */
   /* But TA for sub.powerdns.com. */
   generateKeyMaterial(DNSName("sub.powerdns.com."), DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys);
-  luaconfsCopy.dsAnchors[DNSName("sub.powerdns.com.")].insert(keys[DNSName("sub.powerdns.com.")].second);
+  luaconfsCopy.dsAnchors.insertStatic(DNSName("sub.powerdns.com."), keys[DNSName("sub.powerdns.com.")].second);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -1053,7 +1053,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_insecure_ta)
   generateKeyMaterial(g_rootdnsname, DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys, luaconfsCopy.dsAnchors);
   /* No key material for .com */
   generateKeyMaterial(target, DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys);
-  luaconfsCopy.dsAnchors[target].insert(keys[target].second);
+  luaconfsCopy.dsAnchors.insertStatic(target, keys[target].second);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -1149,7 +1149,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_insecure_ta_norrsig)
   generateKeyMaterial(g_rootdnsname, DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys, luaconfsCopy.dsAnchors);
   /* No key material for .com */
   generateKeyMaterial(target, DNSSEC::ECDSA256, DNSSEC::DIGEST_SHA256, keys);
-  luaconfsCopy.dsAnchors[target].insert(keys[target].second);
+  luaconfsCopy.dsAnchors.insertStatic(target, keys[target].second);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;

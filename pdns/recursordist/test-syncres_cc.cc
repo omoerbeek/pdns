@@ -123,7 +123,7 @@ LuaConfigItems::LuaConfigItems()
 {
   for (const auto& dsRecord : rootDSs) {
     auto ds = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsRecord));
-    dsAnchors[g_rootdnsname].insert(*ds);
+    dsAnchors.insertStatic(g_rootdnsname, *ds);
   }
 }
 
@@ -210,7 +210,7 @@ void initSR(bool debug)
   luaconfsCopy.dsAnchors.clear();
   for (const auto& dsRecord : rootDSs) {
     auto ds = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsRecord));
-    luaconfsCopy.dsAnchors[g_rootdnsname].insert(*ds);
+    luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, *ds);
   }
   luaconfsCopy.d_ntas.clear();
   g_luaconfs.setState(luaconfsCopy);
@@ -500,10 +500,10 @@ void generateKeyMaterial(const DNSName& name, unsigned int algo, uint8_t digest,
   keys[name] = std::pair<DNSSECPrivateKey, DSRecordContent>(dpk, ds);
 }
 
-void generateKeyMaterial(const DNSName& name, unsigned int algo, uint8_t digest, testkeysset_t& keys, map<DNSName, dsset_t>& dsAnchors)
+void generateKeyMaterial(const DNSName& name, unsigned int algo, uint8_t digest, testkeysset_t& keys, LuaConfigItems::TAInfo& dsAnchors)
 {
   generateKeyMaterial(name, algo, digest, keys);
-  dsAnchors[name].insert(keys[name].second);
+  dsAnchors.insertStatic(name, keys[name].second);
 }
 
 LWResult::Result genericDSAndDNSKEYHandler(LWResult* res, const DNSName& domain, DNSName auth, int type, const testkeysset_t& keys, bool proveCut, std::optional<time_t> now, bool nsec3, bool optOut)

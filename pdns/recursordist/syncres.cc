@@ -775,7 +775,7 @@ bool SyncRes::doSpecialNamesResolve(const DNSName& qname, const QType qtype, con
     handled = true;
     if (qtype == QType::TXT || qtype == QType::ANY) {
       auto luaLocal = g_luaconfs.getLocal();
-      for (auto const& dsAnchor : luaLocal->dsAnchors) {
+      for (auto const& dsAnchor : luaLocal->dsAnchors.getMerged()) {
         ostringstream ans;
         ans << "\"";
         ans << dsAnchor.first.toString(); // Explicit toString to have a trailing dot
@@ -3589,7 +3589,7 @@ vState SyncRes::getTA(const DNSName& zone, dsset_t& dsSet, const string& prefix)
 {
   auto luaLocal = g_luaconfs.getLocal();
 
-  if (luaLocal->dsAnchors.empty()) {
+  if (luaLocal->dsAnchors.getMerged().empty()) {
     LOG(prefix << zone << ": No trust anchors configured, everything is Insecure" << endl);
     /* We have no TA, everything is insecure */
     return vState::Insecure;
@@ -3601,7 +3601,7 @@ vState SyncRes::getTA(const DNSName& zone, dsset_t& dsSet, const string& prefix)
     return vState::NTA;
   }
 
-  if (getTrustAnchor(luaLocal->dsAnchors, zone, dsSet)) {
+  if (getTrustAnchor(luaLocal->dsAnchors.getMerged(), zone, dsSet)) {
     if (!zone.isRoot()) {
       LOG(prefix << zone << ": Got TA" << endl);
     }

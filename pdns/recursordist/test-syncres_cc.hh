@@ -69,7 +69,7 @@ void addNSEC3NarrowRecordToLW(const DNSName& domain, const DNSName& zone, const 
 
 void generateKeyMaterial(const DNSName& name, unsigned int algo, uint8_t digest, testkeysset_t& keys);
 
-void generateKeyMaterial(const DNSName& name, unsigned int algo, uint8_t digest, testkeysset_t& keys, map<DNSName, dsset_t>& dsAnchors);
+void generateKeyMaterial(const DNSName& name, unsigned int algo, uint8_t digest, testkeysset_t& keys, LuaConfigItems::TAInfo& dsAnchors);
 
 LWResult::Result genericDSAndDNSKEYHandler(LWResult* res, const DNSName& domain, DNSName auth, int type, const testkeysset_t& keys, bool proveCut = true, std::optional<time_t> now = std::nullopt, bool nsec3 = false, bool optOut = false);
 

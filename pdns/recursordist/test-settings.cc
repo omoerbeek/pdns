@@ -468,10 +468,10 @@ BOOST_AUTO_TEST_CASE(test_yaml_ta_merge)
   ProxyMapping proxyMapping;
   OpenTelemetryTraceConditions conditions;
   pdns::settings::rec::fromBridgeStructToLuaConfig(settings, lua1, proxyMapping, conditions);
-  BOOST_CHECK_EQUAL(lua1.dsAnchors.size(), 2U);
-  BOOST_CHECK_EQUAL(lua1.dsAnchors[DNSName(".")].size(), 1U);
-  BOOST_CHECK_EQUAL(lua1.dsAnchors[DNSName(".")].begin()->getZoneRepresentation(), "19718 13 2 8acbb0cd28f41250a80a491389424d341522d946b0da0c0291f2d3d771d7805a");
-  BOOST_CHECK_EQUAL(lua1.dsAnchors[DNSName("a")].size(), 1U);
+  BOOST_CHECK_EQUAL(lua1.dsAnchors.getMerged().size(), 2U);
+  BOOST_CHECK_EQUAL(lua1.dsAnchors.getMerged().at(DNSName(".")).size(), 1U);
+  BOOST_CHECK_EQUAL(lua1.dsAnchors.getMerged().at(DNSName(".")).begin()->getZoneRepresentation(), "19718 13 2 8acbb0cd28f41250a80a491389424d341522d946b0da0c0291f2d3d771d7805a");
+  BOOST_CHECK_EQUAL(lua1.dsAnchors.getMerged().at(DNSName("a")).size(), 1U);
 
   // Not adding a root DS should leave the default intact
   const std::string yaml2 = R"EOT(dnssec:
@@ -486,9 +486,9 @@ BOOST_AUTO_TEST_CASE(test_yaml_ta_merge)
   settings.validate();
   LuaConfigItems lua2;
   pdns::settings::rec::fromBridgeStructToLuaConfig(settings, lua2, proxyMapping, conditions);
-  BOOST_CHECK_EQUAL(lua2.dsAnchors.size(), 2U);
-  BOOST_CHECK_EQUAL(lua2.dsAnchors[DNSName(".")].size(), 2U);
-  BOOST_CHECK_EQUAL(lua2.dsAnchors[DNSName("a")].size(), 2U);
+  BOOST_CHECK_EQUAL(lua2.dsAnchors.getMerged().size(), 2U);
+  BOOST_CHECK_EQUAL(lua2.dsAnchors.getMerged().at(DNSName(".")).size(), 2U);
+  BOOST_CHECK_EQUAL(lua2.dsAnchors.getMerged().at(DNSName("a")).size(), 2U);
 }
 
 BOOST_AUTO_TEST_CASE(test_yaml_defaults_protobuf)

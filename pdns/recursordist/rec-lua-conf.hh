@@ -114,6 +114,87 @@ using rpzOptions_t = std::unordered_map<std::string, boost::variant<bool, uint32
 class LuaConfigItems
 {
 public:
+  struct TAInfo
+  {
+    void clear()
+    {
+      d_staticConfig.clear();
+      d_runtimeMods.clear();
+      d_mergedConfig.clear();
+    }
+    void clearStatic(const DNSName& who)
+    {
+      d_staticConfig.erase(who);
+      recompute();
+    }
+    void insertStatic(const DNSName& who, const DSRecordContent& ds)
+    {
+      d_staticConfig[who].insert(ds);
+      recompute();
+    }
+    void insertRuntime(const DNSName& who, const DSRecordContent& ds)
+    {
+      d_runtimeMods[who].first.insert(ds);
+      recompute();
+    }
+    void clearRuntime(const DNSName& who)
+    {
+      d_runtimeMods[who].second = true;
+      recompute();
+    }
+
+    void recompute()
+    {
+      map<DNSName, dsset_t> merged{d_staticConfig};
+      for (const auto& [name, mod] : d_runtimeMods) {
+        if (mod.second) {
+          merged.erase(name);
+        }
+        else {
+          merged[name].insert(mod.first.begin(), mod.first.end());
+        }
+      }
+      d_mergedConfig = merged;
+    }
+
+    [[nodiscard]] const std::map<DNSName, dsset_t>& getMerged() const
+    {
+      return d_mergedConfig;
+    }
+
+    [[nodiscard]] std::string toString() const
+    {
+      std::stringstream str;
+      for (const auto& entry : d_staticConfig) {
+        str << entry.first << ' ';
+        for (auto& iter: entry.second) {
+          str << iter.getZoneRepresentation() << ' ';
+        }
+        str << endl;
+      }
+      for (const auto& entry : d_runtimeMods) {
+        str << entry.first << ' ';
+        for (auto& iter: entry.second.first) {
+          str << iter.getZoneRepresentation() << ' ';
+        }
+        str << entry.second.second;
+        str << endl;
+      }
+      return str.str();
+    }
+
+    void setRuntimeKeepers(const TAInfo& old)
+    {
+      d_runtimeMods = old.d_runtimeMods;
+      recompute();
+    }
+
+  private:
+    map<DNSName, dsset_t> d_staticConfig;
+    map<DNSName, std::pair<dsset_t, bool>> d_runtimeMods; // dsset and bool for clear
+    map<DNSName, dsset_t> d_mergedConfig;
+  };
+
   struct NTAInfo
   {
   public:
@@ -208,7 +289,7 @@ public:
   vector<RPZTrackerParams> rpzs;
   vector<FWCatalogZone> catalogzones;
   TrustAnchorFileInfo trustAnchorFileInfo; // Used to update the Trust Anchors from file periodically
-  map<DNSName, dsset_t> dsAnchors;
+  TAInfo dsAnchors;
   NTAInfo d_ntas;
   map<DNSName, RecZoneToCache::Config> ztcConfigs;
   std::map<QType, std::pair<std::set<QType>, AdditionalMode>> allowAdditionalQTypes;

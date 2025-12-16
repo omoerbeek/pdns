@@ -550,7 +550,7 @@ static void apiServerTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
 
   if (!checkDNSSECDisabled()) {
     auto luaconf = g_luaconfs.getLocal();
-    for (const auto& anchor : luaconf->dsAnchors) {
+    for (const auto& anchor : luaconf->dsAnchors.getMerged()) {
       Json::array dsRecords;
       for (const auto& dsRecord : anchor.second) {
         auto dsInfo = Json::object{{"content", dsRecord.getZoneRepresentation()}};
@@ -580,16 +580,13 @@ static void apiServerTrustAnchorsDELETE(HttpRequest* req, HttpResponse* resp)
       throw ApiException("Refusing to remove root Trust Anchor");
     }
 
-    size_t result{};
-    g_luaconfs.modify([entry, &result](LuaConfigItems& lci) {
-      result = lci.dsAnchors.erase(entry);
+    g_luaconfs.modify([entry](LuaConfigItems& lci) {
+      lci.dsAnchors.clearRuntime(entry);
     });
-    if (result > 0) {
-      wipeCaches(entry, true, 0xffff);
-      resp->body = "";
-      resp->status = 204; // No Content, but indicate success
-      return;
-    }
+    wipeCaches(entry, true, 0xffff);
+    resp->body = "";
+    resp->status = 204; // No Content, but indicate success
+    return;
   }
   throw ApiException("Deleting TA failed");
 }
@@ -618,7 +615,7 @@ static void apiServerTrustAnchorsPOST(HttpRequest* req, HttpResponse* resp)
   try {
     auto dsRecord = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsContent));
     g_luaconfs.modify([domain, dsRecord](LuaConfigItems& lci) {
-      lci.dsAnchors[domain].insert(*dsRecord);
+      lci.dsAnchors.insertRuntime(domain, *dsRecord);
     });
     wipeCaches(domain, true, 0xffff);
   }

@@ -2622,12 +2622,12 @@ static void houseKeepingWork(Logr::log_t log)
       if (!luaconfsLocal->trustAnchorFileInfo.fname.empty() && luaconfsLocal->trustAnchorFileInfo.interval != 0) {
         log->info(Logr::Debug, "Refreshing Trust Anchors from file");
         try {
-          map<DNSName, dsset_t> dsAnchors;
-          if (updateTrustAnchorsFromFile(luaconfsLocal->trustAnchorFileInfo.fname, dsAnchors, log)) {
-            g_luaconfs.modify([&dsAnchors](LuaConfigItems& lci) {
-              lci.dsAnchors = dsAnchors;
-            });
-          }
+          // map<DNSName, dsset_t> dsAnchors;
+          // if (updateTrustAnchorsFromFile(luaconfsLocal->trustAnchorFileInfo.fname, dsAnchors, log)) {
+          //   g_luaconfs.modify([&dsAnchors](LuaConfigItems& lci) {
+          //     lci.dsAnchors = dsAnchors;
+          //   });
+          // }
         }
         catch (const PDNSException& pe) {
           log->error(Logr::Error, pe.reason, "Unable to update Trust Anchors");
@@ -3508,9 +3508,9 @@ void activateLuaConfig(LuaConfigItems& lci)
 {
   if (!lci.trustAnchorFileInfo.fname.empty()) {
     warnIfDNSSECDisabled("Warning: reading Trust Anchors from file, but dnssec is set to 'off'!");
-    updateTrustAnchorsFromFile(lci.trustAnchorFileInfo.fname, lci.dsAnchors, lci.d_slog);
+    //updateTrustAnchorsFromFile(lci.trustAnchorFileInfo.fname, lci.dsAnchors, lci.d_slog); XXXXX
   }
-  if (lci.dsAnchors.size() > rootDSs.size()) {
+  if (lci.dsAnchors.getMerged().size() > rootDSs.size()) {
     warnIfDNSSECDisabled("Warning: adding Trust Anchor for DNSSEC, but dnssec is set to 'off'!");
   }
   cerr << "lci.d_ntas: " << lci.d_ntas.toString();

@@ -895,7 +895,7 @@ static Answer doAddTA(ArgIterator begin, ArgIterator end)
     g_log << Logger::Warning << "Adding Trust Anchor for " << who << " with data '" << what << "', requested via control channel";
     g_luaconfs.modify([who, what](LuaConfigItems& lci) {
       auto dsRecord = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(what));
-      lci.dsAnchors[who].insert(*dsRecord);
+      lci.dsAnchors.insertRuntime(who, *dsRecord);
     });
     wipeCaches(who, true, 0xffff);
     g_log << Logger::Warning << endl;
@@ -940,7 +940,7 @@ static Answer doClearTA(ArgIterator begin, ArgIterator end)
     for (auto const& entry : toRemove) {
       g_log << Logger::Warning << "Removing Trust Anchor for " << entry << ", requested via control channel" << endl;
       g_luaconfs.modify([entry](LuaConfigItems& lci) {
-        lci.dsAnchors.erase(entry);
+        lci.dsAnchors.clearRuntime(entry);
       });
       wipeCaches(entry, true, 0xffff);
       if (!first) {
@@ -965,7 +965,7 @@ static Answer getTAs(ArgIterator /* begin */, ArgIterator /* end */)
   }
   string ret("Configured Trust Anchors:\n");
   auto luaconf = g_luaconfs.getLocal();
-  for (const auto& anchor : luaconf->dsAnchors) {
+  for (const auto& anchor : luaconf->dsAnchors.getMerged()) {
     ret += anchor.first.toLogString() + "\n";
     for (const auto& entry : anchor.second) {
       ret += "\t\t" + entry.getZoneRepresentation() + "\n";

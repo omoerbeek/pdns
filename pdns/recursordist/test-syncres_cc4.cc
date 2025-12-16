@@ -648,7 +648,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_root_validation_ksk_zsk)
   /* Set the root DS */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(kskds);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, kskds);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -792,7 +792,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_bogus_dnskey_without_zone_flag)
   /* Set the root DS */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(dsContent);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, dsContent);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -868,7 +868,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_bogus_dnskey_revoked)
   /* Set the root DS */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(dsContent);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, dsContent);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -952,7 +952,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_bogus_dnskey_doesnt_match_ds)
   /* Set the root DS */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(drc);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, drc);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -1154,7 +1154,7 @@ PrivateKey: n7SRA4n6NejhZBWQOhjTaICYSpkTl6plJn1ATFG23FI=)PKEY");
   /* Set the root DS (one of them!) */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(drc);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, drc);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -1256,7 +1256,7 @@ PrivateKey: pTaMJcvNrPIIiQiHGvCLZZASroyQpUwew5FvCgjHNsk=)PKEY");
   /* Set the root DSs (only one of them) */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(drc);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, drc);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -1571,7 +1571,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_insecure_unknown_ds_algorithm)
   /* Set the root DS */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(drc);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, drc);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
@@ -1651,7 +1651,7 @@ BOOST_AUTO_TEST_CASE(test_dnssec_insecure_unknown_ds_digest)
   /* Set the root DS */
   auto luaconfsCopy = g_luaconfs.getCopy();
   luaconfsCopy.dsAnchors.clear();
-  luaconfsCopy.dsAnchors[g_rootdnsname].insert(drc);
+  luaconfsCopy.dsAnchors.insertStatic(g_rootdnsname, drc);
   g_luaconfs.setState(luaconfsCopy);
 
   size_t queriesCount = 0;
