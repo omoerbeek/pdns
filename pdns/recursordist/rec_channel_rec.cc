@@ -801,7 +801,6 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
     return {1, "No Negative Trust Anchor specified, doing nothing.\n"};
   }
 
-  cerr << *begin << endl;
   if (begin + 1 == end && *begin == "*") {
     g_log << Logger::Warning << "Clearing all Negative Trust Anchors, requested via control channel" << endl;
     g_luaconfs.modify([](LuaConfigItems& lci) {
@@ -2167,12 +2166,13 @@ static RecursorControlChannel::Answer luaconfig1(ArgIterator begin, ArgIterator 
     if (*begin == "reset") {
       reset = true;
     }
-    else {
-      if (g_luaSettingsInYAML) {
-        return {1, "Unable to reload Lua config from '" + *begin + "' as there is no active Lua configuration\n"};
-      }
-      ::arg().set("lua-config-file") = *begin;
+    ++begin;
+  }
+  if (begin != end) {
+    if (g_luaSettingsInYAML) {
+      return {1, "Unable to reload Lua config from '" + *begin + "' as there is no active Lua configuration\n"};
     }
+    ::arg().set("lua-config-file") = *begin;
   }
   return luaconfig(true, reset);
 }

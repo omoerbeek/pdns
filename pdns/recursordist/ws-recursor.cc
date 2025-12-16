@@ -557,9 +557,9 @@ static void apiServerTrustAnchorsGET(HttpRequest* /* req */, HttpResponse* resp)
         dsRecords.emplace_back(std::move(dsInfo));
       }
       Json::object taInfo = {
-        {"domain", apiZoneNameToId(anchor.first)},
-        {"ds_records", dsRecords}
-      };
+        {"name", anchor.first.toString()},
+        {"id", apiZoneNameToId(anchor.first)},
+        {"ds_records", dsRecords}};
       ret.emplace_back(std::move(taInfo));
     }
   }
@@ -600,11 +600,11 @@ static void apiServerTrustAnchorsPOST(HttpRequest* req, HttpResponse* resp)
     throw ApiException("DNSSEC is disabled");
   }
   const auto& document = req->json();
-  string domain;
+  DNSName domain;
   string dsContent;
 
   try {
-    domain = apiNameToId(stringFromJson(document, "domain"));
+    domain = apiNameToDNSName(stringFromJson(document, "name"));
   }
   catch (const JsonException&) {
     throw ApiException("domain is not specified or not a string");
@@ -616,12 +616,11 @@ static void apiServerTrustAnchorsPOST(HttpRequest* req, HttpResponse* resp)
     throw ApiException("content is not specified or not a string");
   }
   try {
-    DNSName name{domain};
     auto dsRecord = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(dsContent));
-    g_luaconfs.modify([name, dsRecord](LuaConfigItems& lci) {
-      lci.dsAnchors[name].insert(*dsRecord);
+    g_luaconfs.modify([domain, dsRecord](LuaConfigItems& lci) {
+      lci.dsAnchors[domain].insert(*dsRecord);
     });
-    wipeCaches(name, true, 0xffff);
+    wipeCaches(domain, true, 0xffff);
   }
   catch (const std::exception& e) {
     throw ApiException(e.what());
@@ -639,12 +638,10 @@ static void apiServerNegativeTrustAnchorsPOST(HttpRequest* req, HttpResponse* re
   string why;
 
   try {
-    cerr << "stringFromJson: " << stringFromJson(document, "domain") << endl;
-    domain = apiNameToDNSName(stringFromJson(document, "domain"));
-    cerr << "Add NTA before: " << domain.toString() << endl;
+    domain = apiNameToDNSName(stringFromJson(document, "name"));
   }
   catch (const JsonException&) {
-    throw ApiException("domain is not specified or not a string");
+    throw ApiException("name is not specified or not a string");
   }
   try {
     why = stringFromJson(document, "why");
@@ -661,7 +658,12 @@ static void apiServerNegativeTrustAnchorsPOST(HttpRequest* req, HttpResponse* re
   catch (const std::exception& e) {
     throw ApiException(e.what());
   }
-  cerr << "Add NTA: " << domain << endl;
+
+  Json::object ntaInfo = {
+    {"name", domain.toString()},
+    {"id", apiZoneNameToId(domain)},
+    {"reason", why}};
+  resp->setJsonBody(ntaInfo);
   resp->status = 201;
 }
 
@@ -673,11 +675,10 @@ static void apiServerNegativeTrustAnchorsGET(HttpRequest* /* req */, HttpRespons
   if (!checkDNSSECDisabled()) {
     auto luaconf = g_luaconfs.getLocal();
     for (const auto& anchor : luaconf->d_ntas.getMerged()) {
-      cerr << "Get NTA: " << anchor.first << endl;
       Json::object ntaInfo = {
-        {"domain", apiZoneNameToId(anchor.first)},
-        {"reason", anchor.second}
-      };
+        {"name", anchor.first.toString()},
+        {"id", apiZoneNameToId(anchor.first)},
+        {"reason", anchor.second}};
       ret.emplace_back(std::move(ntaInfo));
     }
   }
@@ -1225,8 +1226,7 @@ static void rustWrapper(const std::function<void(HttpRequest*, HttpResponse*)>& 
   request.body = std::string(reinterpret_cast<const char*>(rustRequest.body.data()), rustRequest.body.size()); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 
   request.url = std::string(rustRequest.uri);
-  //cerr << request.url << endl;
-  cerr << request.body << endl;
+
   for (const auto& [key, value] : rustRequest.vars) {
     request.getvars[std::string(key)] = std::string(value);
   }

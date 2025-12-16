@@ -89,19 +89,18 @@ webservice:
     def addNTA(self, name, reason):
         headers = {'x-api-key': self._apiKey, 'content-type': 'application/json'}
         data = {
-            #'domain': urllib.parse.quote_plus(name),
-            'domain': name,
+            'name': name,
             'why': reason
         }
         url = 'http://127.0.0.1:' + str(self._wsPort) + '/api/v1/servers/localhost/negativetrustanchors';
         r = requests.post(url, headers=headers, data=json.dumps(data), timeout=self._wsTimeout)
         self.assertTrue(r)
         self.assertEqual(r.status_code, 201)
-        return r
+        content = r.json()
+        return content
 
     def delNTA(self, name):
-        headers = {'x-api-key': self._apiKey,
-                   'id': name}
+        headers = {'x-api-key': self._apiKey}
         url = 'http://127.0.0.1:' + str(self._wsPort) + '/api/v1/servers/localhost/negativetrustanchors/' + name;
         r = requests.delete(url, headers=headers, timeout=self._wsTimeout)
         self.assertTrue(r)
@@ -117,24 +116,31 @@ webservice:
         self.delNTA('bogus.example')
         content = self.getNTAs()
         self.assertEqual(len(content), 0)
-        self.addNTA('=secure.optout.example.', 'reason')
+        nta = self.addNTA('=secure.optout.example.', 'reason')
+        self.assertIn('name', nta)
+        self.assertIn('id', nta)
+        self.assertIn('reason', nta)
+        self.assertEqual(nta['id'], '=3Dsecure.optout.example.')
         content = self.getNTAs()
         self.assertEqual(len(content), 1)
         nta = content[0]
-        self.assertIn('domain', nta)
+        self.assertIn('name', nta)
+        self.assertIn('id', nta)
         self.assertIn('reason', nta)
-        self.assertEqual(nta['domain'], '=3Dsecure.optout.example.')
+        self.assertEqual(nta['id'], '=3Dsecure.optout.example.')
         self.recControl(confdir, 'reload-yaml')
         content = self.getNTAs()
         self.assertEqual(len(content), 1)
         nta = content[0]
-        self.assertIn('domain', nta)
+        self.assertIn('name', nta)
+        self.assertIn('id', nta)
         self.assertIn('reason', nta)
-        self.assertEqual(nta['domain'], '=3Dsecure.optout.example.')
+        self.assertEqual(nta['id'], '=3Dsecure.optout.example.')
         self.recControl(confdir, 'reload-yaml reset')
         content = self.getNTAs()
         self.assertEqual(len(content), 2) # the two from config
         nta = content[0]
-        self.assertIn('domain', nta)
+        self.assertIn('name', nta)
+        self.assertIn('id', nta)
         self.assertIn('reason', nta)
-        self.assertEqual(nta['domain'], 'bogus.example.') # we know it's a (sorted) map
+        self.assertEqual(nta['name'], 'bogus.example.') # we know it's a (sorted) map
