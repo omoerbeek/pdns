@@ -189,8 +189,6 @@
 ./pdns/unix_utility.cc
 ./pdns/utility.hh
 ./pdns/uuid-utils.cc
-./pdns/validate.cc
-./pdns/validate.hh
 ./pdns/webserver.cc
 ./pdns/webserver.hh
 ./pdns/zone2json.cc
