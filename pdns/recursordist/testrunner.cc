@@ -63,7 +63,7 @@ static void loggerBackend(const Logging::Entry& entry)
     buf << val.first << "=" << std::quoted(val.second);
   }
   Logger::Urgency urgency = entry.d_priority != 0 ? Logger::Urgency(entry.d_priority) : Logger::Info;
-  g_log << urgency << buf.str() << endl;
+  getLogger() << urgency << buf.str() << endl;
 }
 
 static bool init_unit_test()

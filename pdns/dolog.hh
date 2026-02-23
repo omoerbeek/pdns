@@ -224,22 +224,22 @@ void errlog(const char* formatStr, const Args&... args)
 template <typename... Args>
 void infolog(const char* formatStr, const Args&... args)
 {
-  g_log << Logger::Info;
-  dolog(g_log, formatStr, args...);
+  getLogger() << Logger::Info;
+  dolog(getLogger(), formatStr, args...);
 }
 
 template <typename... Args>
 void warnlog(const char* formatStr, const Args&... args)
 {
-  g_log << Logger::Warning;
-  dolog(g_log, formatStr, args...);
+  getLogger() << Logger::Warning;
+  dolog(getLogger(), formatStr, args...);
 }
 
 template <typename... Args>
 void errlog(const char* formatStr, const Args&... args)
 {
-  g_log << Logger::Error;
-  dolog(g_log, formatStr, args...);
+  getLogger() << Logger::Error;
+  dolog(getLogger(), formatStr, args...);
 }
 
 #endif

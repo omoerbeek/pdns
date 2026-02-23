@@ -634,7 +634,7 @@ static Answer doWipeCache(ArgIterator begin, ArgIterator end, uint16_t qtype)
       countNeg += res.negative_record_count;
     }
     catch (const std::exception& e) {
-      g_log << Logger::Warning << ", failed: " << e.what() << endl;
+      g_slog->withName("runtime")->error(Logr::Warning, e.what(), "failure wiping caches");
     }
   }
 
@@ -719,7 +719,7 @@ static Answer doSetDnssecLogBogus(ArgIterator begin, ArgIterator end)
   if (pdns_iequals(*begin, "on") || pdns_iequals(*begin, "yes")) {
     auto lock = g_yamlStruct.lock();
     if (!g_dnssecLogBogus) {
-      g_log << Logger::Warning << "Enabling DNSSEC Bogus logging, requested via control channel" << endl;
+      g_slog->withName("runtime")->info(Logr::Warning, "Enabling DNSSEC Bogus logging, requested via control channel");
       lock->dnssec.log_bogus = g_dnssecLogBogus = true;
       return {0, "DNSSEC Bogus logging enabled\n"};
     }
@@ -729,7 +729,7 @@ static Answer doSetDnssecLogBogus(ArgIterator begin, ArgIterator end)
   if (pdns_iequals(*begin, "off") || pdns_iequals(*begin, "no")) {
     auto lock = g_yamlStruct.lock();
     if (g_dnssecLogBogus) {
-      g_log << Logger::Warning << "Disabling DNSSEC Bogus logging, requested via control channel" << endl;
+      g_slog->withName("runtime")->info(Logr::Warning, "Disabling DNSSEC Bogus logging, requested via control channel");
       lock->dnssec.log_bogus = g_dnssecLogBogus = false;
       return {0, "DNSSEC Bogus logging disabled\n"};
     }
@@ -767,7 +767,7 @@ static Answer doAddNTA(ArgIterator begin, ArgIterator end)
       why += " ";
     }
   }
-  g_log << Logger::Warning << "Adding Negative Trust Anchor for " << who << " with reason '" << why << "', requested via control channel" << endl;
+  g_slog->withName("runtime")->info(Logr::Warning, "Adding Negative Trust Anchor requested via control channel", "for", Logging::Loggable(who), "reason", Logging::Loggable(why));
   g_luaconfs.modify([who, why](LuaConfigItems& lci) {
     lci.negAnchors[who] = why;
   });
@@ -775,7 +775,7 @@ static Answer doAddNTA(ArgIterator begin, ArgIterator end)
     wipeCaches(who, true, 0xffff);
   }
   catch (std::exception& e) {
-    g_log << Logger::Warning << ", failed: " << e.what() << endl;
+    g_slog->withName("runtime")->error(Logr::Warning, e.what(), "Error adding NTA");
     return {1, "Unable to clear caches while adding Negative Trust Anchor for " + who.toStringRootDot() + ": " + e.what() + "\n"};
   }
   return {0, "Added Negative Trust Anchor for " + who.toLogString() + " with reason '" + why + "'\n"};
@@ -790,7 +790,7 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
     return {1, "No Negative Trust Anchor specified, doing nothing.\n"};
   }
   if (begin + 1 == end && *begin == "*") {
-    g_log << Logger::Warning << "Clearing all Negative Trust Anchors, requested via control channel" << endl;
+    g_slog->withName("runtime")->info(Logr::Warning, "Clearing all Negative Trust Anchors, requested via control channel");
     g_luaconfs.modify([](LuaConfigItems& lci) {
       lci.negAnchors.clear();
     });
@@ -820,7 +820,7 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
   bool first(true);
   try {
     for (auto const& entry : toRemove) {
-      g_log << Logger::Warning << "Clearing Negative Trust Anchor for " << entry << ", requested via control channel" << endl;
+      g_slog->withName("runtime")->info(Logr::Warning, "Clearing Negative Trust Anchor requested via control channel", "entry", Logging::Loggable(entry));
       g_luaconfs.modify([entry](LuaConfigItems& lci) {
         lci.negAnchors.erase(entry);
       });
@@ -833,7 +833,7 @@ static Answer doClearNTA(ArgIterator begin, ArgIterator end)
     }
   }
   catch (std::exception& e) {
-    g_log << Logger::Warning << ", failed: " << e.what() << endl;
+    g_slog->withName("runtime")->error(Logr::Warning, e.what(), "Error clearing NTA");
     return {1, "Unable to clear caches while clearing Negative Trust Anchor for " + who.toStringRootDot() + ": " + e.what() + "\n"};
   }
 
@@ -880,17 +880,16 @@ static Answer doAddTA(ArgIterator begin, ArgIterator end)
   }
 
   try {
-    g_log << Logger::Warning << "Adding Trust Anchor for " << who << " with data '" << what << "', requested via control channel";
+    g_slog->withName("runtime")->info(Logr::Warning, "Adding Trust Anchor request via control channel", "for", Logging::Loggable(who), "content", Logging::Loggable(what));
     g_luaconfs.modify([who, what](LuaConfigItems& lci) {
       auto dsRecord = std::dynamic_pointer_cast<DSRecordContent>(DSRecordContent::make(what));
       lci.dsAnchors[who].insert(*dsRecord);
     });
     wipeCaches(who, true, 0xffff);
-    g_log << Logger::Warning << endl;
     return {0, "Added Trust Anchor for " + who.toStringRootDot() + " with data " + what + "\n"};
   }
   catch (std::exception& e) {
-    g_log << Logger::Warning << ", failed: " << e.what() << endl;
+    g_slog->withName("runtime")->error(Logr::Warning, e.what(), "Adding Trust Anchor failed");
     return {1, "Unable to add Trust Anchor for " + who.toStringRootDot() + ": " + e.what() + "\n"};
   }
 }
@@ -926,7 +925,7 @@ static Answer doClearTA(ArgIterator begin, ArgIterator end)
   bool first = true;
   try {
     for (auto const& entry : toRemove) {
-      g_log << Logger::Warning << "Removing Trust Anchor for " << entry << ", requested via control channel" << endl;
+      g_slog->withName("runtime")->info(Logr::Warning, "Removing Trust Anchor requested via control channel", "entry", Logging::Loggable(entry));
       g_luaconfs.modify([entry](LuaConfigItems& lci) {
         lci.dsAnchors.erase(entry);
       });
@@ -939,7 +938,7 @@ static Answer doClearTA(ArgIterator begin, ArgIterator end)
     }
   }
   catch (std::exception& e) {
-    g_log << Logger::Warning << ", failed: " << e.what() << endl;
+    g_slog->withName("runtime")->error(Logr::Warning, e.what(), "Removing Trust Anchor failed");
     return {1, "Unable to clear caches while clearing Trust Anchor for " + who.toStringRootDot() + ": " + e.what() + "\n"};
   }
 
@@ -1478,7 +1477,7 @@ void registerAllStats()
     registerAllStats1();
   }
   catch (...) {
-    g_log << Logger::Critical << "Could not add stat entries" << endl;
+    g_slog->withName("runtime")->info(Logr::Critical, "Could not add stat entries");
     exit(1); // NOLINT(concurrency-mt-unsafe)
   }
 }
@@ -1800,7 +1799,7 @@ static Answer addDontThrottleNames(ArgIterator begin, ArgIterator end)
   g_dontThrottleNames.setState(std::move(dnt));
 
   ret += " to the list of nameservers that may not be throttled";
-  g_log << Logger::Info << ret << ", requested via control channel" << endl;
+  g_slog->withName("runtime")->info(Logr::Info, "Adding to the list of nameservers that may not be throttled requested via control channel", "names", Logging::IterLoggable(toAdd.begin(), toAdd.end()));
   return {0, ret + "\n"};
 }
 
@@ -1839,7 +1838,7 @@ static Answer addDontThrottleNetmasks(ArgIterator begin, ArgIterator end)
   g_dontThrottleNetmasks.setState(std::move(dnt));
 
   ret += " to the list of nameserver netmasks that may not be throttled";
-  g_log << Logger::Info << ret << ", requested via control channel" << endl;
+  g_slog->withName("runtime")->info(Logr::Info, "Adding names to the list of nameserver netmasks that may not be throttled requested via control channel", "names", Logging::IterLoggable(toAdd.begin(), toAdd.end()));
   return {0, ret + "\n"};
 }
 
@@ -1852,7 +1851,7 @@ static Answer clearDontThrottleNames(ArgIterator begin, ArgIterator end)
     SuffixMatchNode smn;
     g_dontThrottleNames.setState(std::move(smn));
     string ret = "Cleared list of nameserver names that may not be throttled";
-    g_log << Logger::Warning << ret << ", requested via control channel" << endl;
+    g_slog->withName("runtime")->info(Logr::Warning, "Cleared list of nameserver names that may not be throttled, requested via control channel");
     return {0, ret + "\n"};
   }
 
@@ -1885,7 +1884,7 @@ static Answer clearDontThrottleNames(ArgIterator begin, ArgIterator end)
   g_dontThrottleNames.setState(std::move(dnt));
 
   ret += " from the list of nameservers that may not be throttled";
-  g_log << Logger::Info << ret << ", requested via control channel" << endl;
+  g_slog->withName("runtime")->info(Logr::Info, "Clearing names from the list of nameservers that may not be throttled requested via control channel", "names", Logging::IterLoggable(toRemove.begin(), toRemove.end()));
   return {0, ret + "\n"};
 }
 
@@ -1900,7 +1899,7 @@ static Answer clearDontThrottleNetmasks(ArgIterator begin, ArgIterator end)
     g_dontThrottleNetmasks.setState(std::move(nmg));
 
     string ret = "Cleared list of nameserver addresses that may not be throttled";
-    g_log << Logger::Warning << ret << ", requested via control channel" << endl;
+    g_slog->withName("runtime")->info(Logr::Warning, "Cleared list of nameserver addresses that may not be throttled, requested via control channel");
     return {0, ret + "\n"};
   }
 
@@ -1937,7 +1936,7 @@ static Answer clearDontThrottleNetmasks(ArgIterator begin, ArgIterator end)
   g_dontThrottleNetmasks.setState(std::move(dnt));
 
   ret += " from the list of nameservers that may not be throttled";
-  g_log << Logger::Info << ret << ", requested via control channel" << endl;
+  g_slog->withName("runtime")->info(Logr::Info, "Removed names from the list of nameservers that may not be throttled, requested via control channel", "names", Logging::IterLoggable(toRemove.begin(), toRemove.end()));
   return {0, ret + "\n"};
 }
 
@@ -2181,19 +2180,19 @@ static RecursorControlChannel::Answer luaconfig1(ArgIterator begin, ArgIterator 
 static RecursorControlChannel::Answer reloadACLs(ArgIterator /* begin */, ArgIterator /* end */)
 {
   if (!::arg()["chroot"].empty()) {
-    g_log << Logger::Error << "Unable to reload ACL when chroot()'ed, requested via control channel" << endl;
+    g_slog->withName("runtime")->info(Logr::Error,"Unable to reload ACL when chroot()'ed, requested via control channel");
     return {1, "Unable to reload ACL when chroot()'ed, please restart\n"};
   }
 
   try {
     parseACLs();
   }
-  catch (std::exception& e) {
-    g_log << Logger::Error << "Reloading ACLs failed (Exception: " << e.what() << ")" << endl;
+  catch (const std::exception& e) {
+    g_slog->withName("runtime")->error(Logr::Error, e.what(), "Reloading ACLs failed");
     return {1, e.what() + string("\n")};
   }
-  catch (PDNSException& ae) {
-    g_log << Logger::Error << "Reloading ACLs failed (PDNSException: " << ae.reason << ")" << endl;
+  catch (const PDNSException& ae) {
+    g_slog->withName("runtime")->error(Logr::Error, ae.reason, "Reloading ACLs failed");
     return {1, ae.reason + string("\n")};
   }
   return {0, "ok\n"};
@@ -2350,7 +2349,7 @@ RecursorControlChannel::Answer RecursorControlParser::getAnswer(int socket, cons
      }},
     {"reload-zones", [](ArgIterator, ArgIterator) -> Answer {
        if (!::arg()["chroot"].empty()) {
-         g_log << Logger::Error << "Unable to reload zones and forwards when chroot()'ed, requested via control channel" << endl;
+         g_slog->withName("runtime")->info(Logr::Error, "Unable to reload zones and forwards when chroot()'ed, requested via control channel");
          return {1, "Unable to reload zones and forwards when chroot()'ed, please restart\n"};
        }
        return {0, reloadZoneConfigurationWithSysResolveReset()};

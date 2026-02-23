@@ -402,7 +402,7 @@ bool SyncRes::s_addExtendedResolutionDNSErrors;
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define LOG(x)                       \
   if (d_lm == Log) {                 \
-    g_log << Logger::Warning << x;   \
+    getLogger() << Logger::Warning << x;        \
   }                                  \
   else if (d_lm == Store) {          \
     addTraceTS(d_fixednow, d_trace); \
@@ -413,7 +413,7 @@ OptLog SyncRes::LogObject(const string& prefix)
 {
   OptLog ret;
   if (d_lm == Log) {
-    ret = {prefix, d_fixednow, g_log};
+    ret = {prefix, d_fixednow, getLogger()};
   }
   else if (d_lm == Store) {
     ret = {prefix, d_fixednow, d_trace};

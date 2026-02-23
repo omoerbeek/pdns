@@ -162,7 +162,9 @@ private:
 
 Logger& getLogger();
 
+#if !defined(RECURSOR)
 #define g_log getLogger()
+#endif
 
 #ifdef VERBOSELOG
 #define DLOG(x) x

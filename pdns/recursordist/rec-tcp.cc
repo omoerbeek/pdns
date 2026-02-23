@@ -150,7 +150,7 @@ static void sendErrorOverTCP(std::unique_ptr<DNSComboWriter>& comboWriter, int r
   header.cd = comboWriter->d_mdp.d_header.cd;
   header.rcode = rcode;
 
-  sendResponseOverTCP(comboWriter, packet);
+  sendResponseOverTCP(g_slogtcpin, comboWriter, packet);
 }
 
 void finishTCPReply(std::unique_ptr<DNSComboWriter>& comboWriter, bool hadError, bool updateInFlight)
@@ -468,7 +468,7 @@ static void doProcessTCPQuestion(std::unique_ptr<DNSComboWriter>& comboWriter, s
         }
 
         auto answerMatch = comboWriter->d_eventTrace.add(RecEventTrace::AnswerSent);
-        bool hadError = sendResponseOverTCP(comboWriter, response);
+        bool hadError = sendResponseOverTCP(g_slogtcpin, comboWriter, response);
         finishTCPReply(comboWriter, hadError, false);
         struct timeval now{};
         Utility::gettimeofday(&now, nullptr);

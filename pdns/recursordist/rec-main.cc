@@ -1168,7 +1168,7 @@ static void loggerBackend(const Logging::Entry& entry)
     buf << value.first << "=" << std::quoted(value.second);
   }
 
-  g_log << urg << buf.str() << endl;
+  getLogger() << urg << buf.str() << endl;
 }
 
 static std::string ratePercentage(uint64_t nom, uint64_t denom)
@@ -1915,7 +1915,7 @@ static int initForks(Logr::log_t log)
 
   if (::arg().mustDo("daemon")) {
     log->info(Logr::Warning, "Calling daemonize, going to background");
-    g_log.toConsole(Logger::Critical);
+    getLogger().toConsole(Logger::Critical);
     daemonize(log);
   }
 
@@ -2106,15 +2106,15 @@ static int initDNS64(Logr::log_t log)
 
 static int serviceMain(Logr::log_t log)
 {
-  g_log.setName(g_programname);
-  g_log.disableSyslog(::arg().mustDo("disable-syslog"));
-  g_log.setTimestamps(::arg().mustDo("log-timestamp"));
+  getLogger().setName(g_programname);
+  getLogger().disableSyslog(::arg().mustDo("disable-syslog"));
+  getLogger().setTimestamps(::arg().mustDo("log-timestamp"));
   g_regressionTestMode = ::arg().mustDo("devonly-regression-test-mode");
 
   if (!::arg()["logging-facility"].empty()) {
     int val = logFacilityToLOG(::arg().asNum("logging-facility"));
     if (val >= 0) {
-      g_log.setFacility(val);
+      getLogger().setFacility(val);
     }
     else {
       log->info(Logr::Error, "Unknown logging facility", "facility", Logging::Loggable(::arg().asNum("logging-facility")));
@@ -3091,7 +3091,7 @@ int main(int argc, char** argv)
   try {
     pdns::settings::rec::defineOldStyleSettings();
     ::arg().setDefaults();
-    g_log.toConsole(Logger::Info);
+    getLogger().toConsole(Logger::Info);
     ::arg().laxParse(argc, argv); // do a lax parse
 
     if (::arg().mustDo("version")) {
@@ -3114,14 +3114,14 @@ int main(int argc, char** argv)
     if (!g_quiet && s_logUrgency < Logger::Info) { // Logger::Info=6, Logger::Debug=7
       s_logUrgency = Logger::Info; // if you do --quiet=no, you need Info to also see the query log
     }
-    g_log.setLoglevel(s_logUrgency);
-    g_log.toConsole(s_logUrgency);
+    getLogger().setLoglevel(s_logUrgency);
+    getLogger().toConsole(s_logUrgency);
 
     for (const string& line : getProductVersionLines()) {
-      g_log << Logger::Info << line << endl;
+      getLogger() << Logger::Info << line << endl;
     }
     if (!::arg().mustDo("structured-logging")) {
-      g_log << Logger::Error << "Disabling structured logging is not supported anymore" << endl;
+      getLogger() << Logger::Error << "Disabling structured logging is not supported anymore" << endl;
     }
 
     g_yamlSettings = false;
@@ -3220,8 +3220,8 @@ int main(int argc, char** argv)
     if (!g_quiet && s_logUrgency < Logger::Info) { // Logger::Info=6, Logger::Debug=7
       s_logUrgency = Logger::Info; // if you do --quiet=no, you need Info to also see the query log
     }
-    g_log.setLoglevel(s_logUrgency);
-    g_log.toConsole(s_logUrgency);
+    getLogger().setLoglevel(s_logUrgency);
+    getLogger().toConsole(s_logUrgency);
 
     if (!::arg()["chroot"].empty() && !::arg()["api-config-dir"].empty()) {
       startupLog->info(Logr::Error, "Cannot use chroot and enable the API at the same time");

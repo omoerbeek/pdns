@@ -298,7 +298,7 @@ inline MT_t* getMT()
 
 /* this function is called with both a string and a vector<uint8_t> representing a packet */
 template <class T>
-static bool sendResponseOverTCP(const std::unique_ptr<DNSComboWriter>& dc, const T& packet)
+static bool sendResponseOverTCP(Logr::log_t log, const std::unique_ptr<DNSComboWriter>& dc, const T& packet)
 {
   uint8_t buf[2];
   buf[0] = packet.size() / 256;
@@ -314,14 +314,14 @@ static bool sendResponseOverTCP(const std::unique_ptr<DNSComboWriter>& dc, const
   bool hadError = true;
 
   if (wret == 0) {
-    g_log << Logger::Warning << "EOF writing TCP answer to " << dc->getRemote() << endl;
+    log->info(Logr::Warning, "EOF writing TCP answer", "remote", Logging::Loggable(dc->getRemote()));
   }
   else if (wret < 0) {
     int err = errno;
-    g_log << Logger::Warning << "Error writing TCP answer to " << dc->getRemote() << ": " << strerror(err) << endl;
+    log->error(Logr::Warning, err, "Error writing TCP answer", "remote", Logging::Loggable(dc->getRemote()));
   }
   else if ((unsigned int)wret != 2 + packet.size()) {
-    g_log << Logger::Warning << "Oops, partial answer sent to " << dc->getRemote() << " for " << dc->d_mdp.d_qname << " (size=" << (2 + packet.size()) << ", sent " << wret << ")" << endl;
+    log->info(Logr::Warning, "Partial answer sent", "remote", Logging::Loggable(dc->getRemote()),  "qname", Logging::Loggable(dc->d_mdp.d_qname), "size", Logging::Loggable(2 + packet.size()), "sent", Logging::Loggable(wret));
   }
   else {
     hadError = false;

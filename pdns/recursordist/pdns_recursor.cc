@@ -894,11 +894,11 @@ static void dumpTrace(const string& trace, const timeval& timev)
   }
   if (t_tracefd < 0) {
     std::istringstream buf(trace);
-    g_log << Logger::Warning << "=== START OF FAIL TRACE ====" << endl;
+    getLogger() << Logger::Warning << "=== START OF FAIL TRACE ====" << endl;
     for (string line; std::getline(buf, line);) {
-      g_log << Logger::Warning << line << endl;
+      getLogger() << Logger::Warning << line << endl;
     }
-    g_log << Logger::Warning << "=== END OF FAIL TRACE ====" << endl;
+    getLogger() << Logger::Warning << "=== END OF FAIL TRACE ====" << endl;
     return;
   }
   timeval now{};
@@ -1795,7 +1795,7 @@ void startDoResolve(void* arg) // NOLINT(readability-function-cognitive-complexi
       }
     }
     else {
-      bool hadError = sendResponseOverTCP(comboWriter, packet);
+      bool hadError = sendResponseOverTCP(g_slogtcpin, comboWriter, packet);
       finishTCPReply(comboWriter, hadError, true);
       tcpGuard.setHandled();
     }

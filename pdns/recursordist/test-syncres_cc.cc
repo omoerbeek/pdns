@@ -131,16 +131,17 @@ LuaConfigItems::LuaConfigItems()
 
 void initSR(bool debug)
 {
-  g_log.setName("test");
-  g_log.disableSyslog(true);
+  auto log = getLogger();
+  log.setName("test");
+  log.disableSyslog(true);
 
   if (debug) {
-    g_log.setLoglevel((Logger::Urgency)(6)); // info and up
-    g_log.toConsole(Logger::Info);
+    log.setLoglevel((Logger::Urgency)(6)); // info and up
+    log.toConsole(Logger::Info);
   }
   else {
-    g_log.setLoglevel(Logger::None);
-    g_log.toConsole(Logger::Error);
+    log.setLoglevel(Logger::None);
+    log.toConsole(Logger::Error);
   }
 
   RecursorPacketCache::s_refresh_ttlperc = 0;

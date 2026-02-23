@@ -102,8 +102,8 @@ BOOST_AUTO_TEST_CASE(test_zonetocache)
 {
   std::unique_ptr<SyncRes> sr;
   initSR(sr, true);
-  g_log.setLoglevel(Logger::Critical);
-  g_log.toConsole(Logger::Critical);
+  //g_log.setLoglevel(Logger::Critical);
+  //g_log.toConsole(Logger::Critical);
   setDNSSECValidation(sr, DNSSECMode::ValidateAll);
 
   zonemdTest(zone, pdns::ZoneMD::Config::Ignore, pdns::ZoneMD::Config::Ignore, 17U);
@@ -173,8 +173,6 @@ static void zonemdGenericTest(const std::string& lines, pdns::ZoneMD::Config mod
 BOOST_AUTO_TEST_CASE(test_zonetocachegeneric)
 {
   SyncRes::setDomainMap(std::make_shared<SyncRes::domainmap_t>());
-  g_log.setLoglevel(Logger::Critical);
-  g_log.toConsole(Logger::Critical);
   zonemdGenericTest(genericTest, pdns::ZoneMD::Config::Require, pdns::ZoneMD::Config::Ignore, 4U);
   zonemdGenericTest(genericBadTest, pdns::ZoneMD::Config::Require, pdns::ZoneMD::Config::Ignore, 0U);
 }

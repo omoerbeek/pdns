@@ -1179,7 +1179,7 @@ bool pdns_ffi_param_add_record(pdns_ffi_param_t* ref, const char* name, uint16_t
     return true;
   }
   catch (const std::exception& e) {
-    g_log << Logger::Error << "Error attempting to add a record from Lua via pdns_ffi_param_add_record(): " << e.what() << endl;
+    g_slog->withName("lua")->error(Logr::Error, e.what(), "Error attempting to add a record from Lua via pdns_ffi_param_add_record()");
     return false;
   }
 }
@@ -1304,7 +1304,7 @@ bool pdns_postresolve_ffi_handle_get_record(pdns_postresolve_ffi_handle_t* ref, 
     record->type = dnsRecord.d_type;
   }
   catch (const std::exception& e) {
-    g_log << Logger::Error << "Error attempting to get a record from Lua via pdns_postresolve_ffi_handle_get_record: " << e.what() << endl;
+    g_slog->withName("lua")->error(Logr::Error, e.what(), "Error attempting to get a record from Lua via pdns_postresolve_ffi_handle_get_record");
     return false;
   }
 
@@ -1328,7 +1328,7 @@ bool pdns_postresolve_ffi_handle_set_record(pdns_postresolve_ffi_handle_t* ref, 
     return true;
   }
   catch (const std::exception& e) {
-    g_log << Logger::Error << "Error attempting to set record content from Lua via pdns_postresolve_ffi_handle_set_record(): " << e.what() << endl;
+    g_slog->withName("lua")->error(Logr::Error, e.what(), "Error attempting to set record content from Lua via pdns_postresolve_ffi_handle_set_record()");
     return false;
   }
 }
@@ -1358,7 +1358,7 @@ bool pdns_postresolve_ffi_handle_add_record(pdns_postresolve_ffi_handle_t* ref, 
     return true;
   }
   catch (const std::exception& e) {
-    g_log << Logger::Error << "Error attempting to add a record from Lua via pdns_postresolve_ffi_handle_add_record(): " << e.what() << endl;
+    g_slog->withName("lua")->error(Logr::Error, e.what(), "Error attempting to add a record from Lua via pdns_postresolve_ffi_handle_add_record()");
     return false;
   }
 }
