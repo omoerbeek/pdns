@@ -1806,6 +1806,9 @@ void startDoResolve(void* arg) // NOLINT(readability-function-cognitive-complexi
 
     // Now do the per query changing part of the protobuf message
     if (t_protobufServers.servers && !(luaconfsLocal->protobufExportConfig.taggedOnly && appliedPolicy.getName().empty() && comboWriter->d_policyTags.empty()) && t_protobufServers.sampleR()) {
+      if (t_protobufServers.isRSampled()) {
+        resolver.d_otTrace.sampled = true;
+      }
       // Below are the fields that are not stored in the packet cache and will be appended here and on a cache hit
       if (g_useKernelTimestamp && comboWriter->d_kernelTimestamp.tv_sec != 0) {
         pbMessage.setQueryTime(comboWriter->d_kernelTimestamp.tv_sec, comboWriter->d_kernelTimestamp.tv_usec);
@@ -2373,6 +2376,9 @@ static string* doProcessUDPQuestion(const std::string& question, const ComboAddr
         eventTrace.add(RecEventTrace::AnswerSent, sendErr, false, match);
         traceScope.close(0);
         if (t_protobufServers.servers && logResponse && (!luaconfsLocal->protobufExportConfig.taggedOnly || (pbData && pbData->d_tagged)) && t_protobufServers.sampleR()) {
+          if (t_protobufServers.isRSampled()) {
+            otTrace.sampled = true;
+          }
           protobufLogResponse(qname, qtype, dnsheader, luaconfsLocal, pbData, tval, false, source, destination, mappedSource, ednssubnet, uniqueId, requestorId, deviceId, deviceName, meta, eventTrace, otTrace, policyTags);
         }
 

@@ -105,6 +105,7 @@ std::vector<pdns::trace::Span> RecEventTrace::convertToOT(const InitialSpanInfo&
     .kind = pdns::trace::Span::SpanKind::SPAN_KIND_SERVER,
     .start_time_unix_nano = span.start_time_unix_nano,
     .end_time_unix_nano = timestamp(),
+    .flags = span.sampled ? 1U : 0U,
   });
 
   std::vector<SpanID> spanIDs; // mapping of span index in ret vector to SpanID

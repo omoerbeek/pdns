@@ -391,6 +391,7 @@ struct InitialSpanInfo
   SpanID span_id{};
   SpanID parent_span_id{};
   uint64_t start_time_unix_nano{0};
+  bool sampled{false};
 
   void clear()
   {
