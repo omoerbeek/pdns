@@ -68,6 +68,8 @@ bool operator==(const ProtobufExportConfig& configA, const ProtobufExportConfig&
   return configA.exportTypes          == configB.exportTypes       &&
          configA.servers              == configB.servers           &&
          configA.maxQueuedEntries     == configB.maxQueuedEntries  &&
+         configA.qsample              == configB.qsample           &&
+         configA.rsample              == configB.rsample           &&
          configA.timeout              == configB.timeout           &&
          configA.reconnectWaitTime    == configB.reconnectWaitTime &&
          configA.asyncConnect         == configB.asyncConnect      &&
@@ -188,6 +190,14 @@ static void parseProtobufOptions(const std::optional<protobufOptions_t>& vars, P
 
   if (have.count("maxQueuedEntries") != 0) {
     config.maxQueuedEntries = boost::get<uint64_t>(have.at("maxQueuedEntries"));
+  }
+
+  if (have.count("qsample") != 0) {
+    config.qsample = boost::get<uint64_t>(have.at("qsample"));
+  }
+
+  if (have.count("rsample") != 0) {
+    config.rsample = boost::get<uint64_t>(have.at("rsample"));
   }
 
   if (have.count("reconnectWaitTime") != 0) {

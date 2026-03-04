@@ -427,6 +427,8 @@ impl ProtobufServer {
         insertseq(&mut map, "servers", &seq);
         insertu(&mut map, "timeout", self.timeout);
         insertu(&mut map, "maxQueuedEntries", self.maxQueuedEntries);
+        insertu(&mut map, "qsample", self.qsample);
+        insertu(&mut map, "rsample", self.rsample);
         insertu(&mut map, "reconnectWaitTime", self.reconnectWaitTime);
         insertb(&mut map, "taggedOnly", self.taggedOnly);
         insertb(&mut map, "asyncConnect", self.asyncConnect);

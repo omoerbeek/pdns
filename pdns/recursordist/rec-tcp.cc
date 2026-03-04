@@ -395,7 +395,7 @@ static void doProcessTCPQuestion(std::unique_ptr<DNSComboWriter>& comboWriter, s
     comboWriter->d_uuid = getUniqueID();
   }
 
-  if (t_protobufServers.servers) {
+  if (t_protobufServers.servers && t_protobufServers.sampleQ()) {
     doProtobufLogQuery(logQuery, luaconfsLocal, comboWriter, qname, qtype, qclass, dnsheader, conn, ednsVersion);
   }
 
@@ -477,7 +477,7 @@ static void doProcessTCPQuestion(std::unique_ptr<DNSComboWriter>& comboWriter, s
         comboWriter->d_eventTrace.add(RecEventTrace::AnswerSent, 0, false, answerMatch);
         traceScope.close(0);
 
-        if (t_protobufServers.servers && comboWriter->d_logResponse && (!luaconfsLocal->protobufExportConfig.taggedOnly || (pbData && pbData->d_tagged))) {
+        if (t_protobufServers.servers && comboWriter->d_logResponse && (!luaconfsLocal->protobufExportConfig.taggedOnly || (pbData && pbData->d_tagged)) && t_protobufServers.sampleR()) {
           struct timeval tval{
             0, 0};
           protobufLogResponse(qname, qtype, dnsheader, luaconfsLocal, pbData, tval, true, comboWriter->d_source, comboWriter->d_destination, comboWriter->d_mappedSource, comboWriter->d_ednssubnet, comboWriter->d_uuid, comboWriter->d_requestorId, comboWriter->d_deviceId, comboWriter->d_deviceName, comboWriter->d_meta, comboWriter->d_eventTrace, comboWriter->d_otTrace, comboWriter->d_policyTags);

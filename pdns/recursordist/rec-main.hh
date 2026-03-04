@@ -258,6 +258,30 @@ struct ProtobufServersInfo
   std::shared_ptr<std::vector<std::unique_ptr<RemoteLogger>>> servers;
   uint64_t generation;
   ProtobufExportConfig config;
+  uint32_t qcounter{0};
+  uint32_t rcounter{0};
+  [[nodiscard]] bool sampleQ()
+  {
+    if (config.qsample > 0) {
+      return qcounter++ % config.qsample == 0;
+    }
+    return true;
+  }
+  [[nodiscard]] bool sampleR()
+  {
+    if (config.rsample > 0) {
+      return rcounter++ % config.rsample == 0;
+    }
+    return true;
+  }
+  [[nodiscard]] bool isQSampled() const
+  {
+    return config.qsample != 0;
+  }
+  [[nodiscard]] bool isRSampled() const
+  {
+    return config.rsample != 0;
+  }
 };
 extern thread_local ProtobufServersInfo t_protobufServers;
 extern thread_local ProtobufServersInfo t_outgoingProtobufServers;

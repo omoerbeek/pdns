@@ -789,6 +789,8 @@ void fromLuaToRust(const ProtobufExportConfig& pbConfig, pdns::rust::settings::r
     pbServer.exportTypes.emplace_back(QType(num).toString());
   }
   pbServer.logMappedFrom = pbConfig.logMappedFrom;
+  pbServer.qsample = pbConfig.qsample;
+  pbServer.rsample = pbConfig.rsample;
 }
 
 void fromLuaToRust(const FrameStreamExportConfig& fsc, pdns::rust::settings::rec::DNSTapFrameStreamServer& dnstap)
@@ -910,6 +912,7 @@ void fromLuaToRust(const vector<RPZTrackerParams>& rpzs, pdns::rust::settings::r
     assign(rustrpz.tsig, rpz.zoneXFRParams.tsigtriplet);
     rustrpz.refresh = rpz.zoneXFRParams.refreshFromConf;
     rustrpz.maxReceivedMBytes = rpz.zoneXFRParams.maxReceivedMBytes;
+
     if (rpz.zoneXFRParams.localAddress != ComboAddress()) {
       rustrpz.localAddress = rpz.zoneXFRParams.localAddress.toString();
     }
@@ -1142,6 +1145,8 @@ void fromRustToLuaConfig(const pdns::rust::settings::rec::ProtobufServer& pbServ
   exp.logResponses = pbServer.logResponses;
   exp.taggedOnly = pbServer.taggedOnly;
   exp.logMappedFrom = pbServer.logMappedFrom;
+  exp.qsample = pbServer.qsample;
+  exp.rsample = pbServer.rsample;
 }
 
 void fromRustToLuaConfig(const pdns::rust::settings::rec::DNSTapFrameStreamServer& dnstap, FrameStreamExportConfig& exp)
