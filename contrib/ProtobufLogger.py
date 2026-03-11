@@ -33,10 +33,11 @@ except Exception:
 
 class PDNSPBConnHandler(object):
 
-    def __init__(self, conn, oturl, printjson):
+    def __init__(self, conn, oturl, printjson, frame4):
         self._conn = conn
         self._oturl = oturl
         self._printjson = printjson
+        self._frame4 = frame4
 
     messageTypeToStringMap = {
         dnsmessage_pb2.PBDNSMessage.UNKNOWN: 'Unknown',
@@ -49,11 +50,17 @@ class PDNSPBConnHandler(object):
 
     def run(self):
         while True:
-            data = self._conn.recv(2)
-            if not data or len(data) < 2:
-                break
+            if self._frame4:
+                data = self._conn.recv(4)
+                if not data or len(data) < 4:
+                    break
+                (datalen,) = struct.unpack("!L", data)
+            else:
+                data = self._conn.recv(2)
+                if not data or len(data) < 2:
+                    break
+                (datalen,) = struct.unpack("!H", data)
 
-            (datalen,) = struct.unpack("!H", data)
             data = b''
             remaining = datalen
 
@@ -155,8 +162,8 @@ class PDNSPBConnHandler(object):
                     self.convertIDs(values)
                     json_string = json.dumps(values, indent=True)
                     print("- openTelemetry: " + json_string)
-                else:
-                    print("- openTelemetry decoding not available, see the comments in ProtoBuffer.py to make it available.")
+            else:
+                print("- openTelemetry decoding not available, see the comments in ProtoBuffer.py to make it available.")
 
     @staticmethod
     def getAppliedPolicyTypeAsString(polType):
@@ -239,7 +246,7 @@ class PDNSPBConnHandler(object):
                 if (rrclass == 1 or rrclass == 255) and rr.HasField('rdata'):
                     if rrtype == 1:
                         rdatastr = socket.inet_ntop(socket.AF_INET, rr.rdata)
-                    elif rrtype in (5, 35, 64, 65):
+                    elif rrtype in (5, 16, 35, 64, 65):
                         rdatastr = rr.rdata
                     elif rrtype == 28:
                         rdatastr = socket.inet_ntop(socket.AF_INET6, rr.rdata)
@@ -395,9 +402,10 @@ class PDNSPBConnHandler(object):
 
 class PDNSPBListener(object):
 
-    def __init__(self, addr, port, oturl, printjson):
+    def __init__(self, addr, port, oturl, printjson, frame4):
         self._oturl = oturl
         self._printjson = printjson
+        self._frame4 = frame4
         res = socket.getaddrinfo(addr, port, socket.AF_UNSPEC,
                                  socket.SOCK_STREAM, 0,
                                  socket.AI_PASSIVE)
@@ -419,7 +427,7 @@ class PDNSPBListener(object):
         while True:
             (conn, _) = self._sock.accept()
 
-            handler = PDNSPBConnHandler(conn, self._oturl, self._printjson)
+            handler = PDNSPBConnHandler(conn, self._oturl, self._printjson, self._frame4)
             thread = threading.Thread(name='Connection Handler',
                                       target=PDNSPBConnHandler.run,
                                       args=[handler])
@@ -438,6 +446,7 @@ if __name__ == "__main__":
     parser.add_argument('address')
     parser.add_argument('port')
     parser.add_argument('-url')
+    parser.add_argument('-frame4', action='store_true')
     args = parser.parse_args();
-    PDNSPBListener(args.address, args.port, args.url, args.json).run()
+    PDNSPBListener(args.address, args.port, args.url, args.json, args.frame4).run()
     sys.exit(0)
