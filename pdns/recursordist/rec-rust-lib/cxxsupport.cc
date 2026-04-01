@@ -1342,6 +1342,13 @@ void fromRustToLuaConfig(const rust::Vec<pdns::rust::settings::rec::ForwardingCa
   }
 }
 
+void fromRustToLuaConfig(const rust::Vec<pdns::rust::settings::rec::QNameAndQType>& keepwarm, std::vector<std::pair<DNSName, QType>>& lua)
+{
+  for (const auto& warm : keepwarm) {
+    lua.emplace_back(DNSName(std::string(warm.qname)), QType::chartocode(std::string(warm.qtype).data()));
+  }
+}
+
 void fromRustToOTTraceConditions(const rust::Vec<pdns::rust::settings::rec::OpenTelemetryTraceCondition>& settings, OpenTelemetryTraceConditions& conditions)
 {
   for (const auto& setting : settings) {
@@ -1394,6 +1401,7 @@ void pdns::settings::rec::fromBridgeStructToLuaConfig(const pdns::rust::settings
   fromRustToLuaConfig(settings.recursor.forwarding_catalog_zones, luaConfig.catalogzones);
   fromRustToLuaConfig(settings.incoming.proxymappings, proxyMapping);
   fromRustToOTTraceConditions(settings.logging.opentelemetry_trace_conditions, conditions);
+  fromRustToLuaConfig(settings.recordcache.keepwarm, luaConfig.keepWarm);
 }
 
 // Return true if an item that's (also) a Lua config item is set
