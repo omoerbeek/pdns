@@ -1960,6 +1960,66 @@ BOOST_AUTO_TEST_CASE(test_cname_loop_forwarder)
   BOOST_REQUIRE_THROW(resolver->beginResolve(target, QType(QType::A), QClass::IN, ret), ImmediateServFailException);
 }
 
+BOOST_AUTO_TEST_CASE(test_cname_loop2)
+{
+  std::unique_ptr<SyncRes> sr;
+  initSR(sr, false, true);
+  sr->setQNameMinimization();
+
+  primeHints();
+
+  size_t count = 0;
+  const DNSName target1("cname1.powerdns.com.");
+  const DNSName target2("cname2.powerdns.com.");
+
+  sr->setAsyncCallback([&](const ComboAddress& address, const DNSName& domain, int /* type */, bool /* doTCP */, bool /* sendRDQuery */, int /* EDNS0Level */, struct timeval* /* now */, std::optional<Netmask>& /* srcmask */, const ResolveContext& /* context */, LWResult* res, bool* /* chained */) {
+    count++;
+
+    if (isRootServer(address)) {
+
+      setLWResult(res, 0, false, false, true);
+      addRecordToLW(res, domain, QType::NS, "a.gtld-servers.net.", DNSResourceRecord::AUTHORITY, 172800);
+      addRecordToLW(res, "a.gtld-servers.net.", QType::A, "192.0.2.1", DNSResourceRecord::ADDITIONAL, 3600);
+      return LWResult::Result::Success;
+    }
+    if (address == ComboAddress("192.0.2.1:53")) {
+
+      //if (domain == target1) {
+        setLWResult(res, 0, true, false, false);
+        addRecordToLW(res, target1, QType::CNAME, target2.toString());
+        addRecordToLW(res, target2, QType::CNAME, target1.toString());
+        return LWResult::Result::Success;
+      //}
+      //if (domain == target2) {
+        //setLWResult(res, 0, true, false, false);
+        //addRecordToLW(res, target2, QType::CNAME, target1.toString());
+        //addRecordToLW(res, target1, QType::CNAME, target2.toString());
+        //return LWResult::Result::Success;
+      //}
+    }
+
+    return LWResult::Result::Timeout;
+  });
+
+  vector<DNSRecord> ret;
+  int res = sr->beginResolve(target1, QType(QType::A), QClass::IN, ret);
+  BOOST_CHECK_EQUAL(res, RCode::ServFail);
+  BOOST_CHECK_EQUAL(ret.size(), 0U);
+  BOOST_CHECK_EQUAL(count, 8U);
+
+  // And again to check cache
+  try {
+    sr->beginResolve(DNSName("test1.powerdns.com"), QType(QType::A), QClass::IN, ret);
+    BOOST_CHECK(false);
+  }
+  catch (const ImmediateServFailException& ex) {
+    BOOST_CHECK(true);
+    BOOST_CHECK(false);
+  }
+  BOOST_CHECK(false);
+}
+
+
 BOOST_AUTO_TEST_CASE(test_cname_long_loop)
 {
   std::unique_ptr<SyncRes> sr;
