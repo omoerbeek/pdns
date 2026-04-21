@@ -2941,9 +2941,9 @@ Maximum number of idle outgoing TCP/DoT connections per thread, 0 means do not k
         "section": "recursor",
         "type": LType.Uint64,
         "default": "2",
-        "help": "Launch this number of threads",
+        "help": "Launch this number of worker threads",
         "doc": """
-Spawn this number of threads on startup.
+Spawn this number of worker threads on startup.
  """,
     },
     {
@@ -2956,6 +2956,17 @@ Spawn this number of threads on startup.
 Spawn this number of TCP processing threads on startup.
  """,
         "versionadded": "5.0.0",
+    },
+    {
+        "name": "taskthreads",
+        "section": "recursor",
+        "type": LType.Uint64,
+        "default": "1",
+        "help": "Launch this number of async task threads",
+        "doc": """
+Spawn this number of asynchronous task threads on startup.
+ """,
+        "versionadded": "5.5.0",
     },
     {
         "name": "trace",
