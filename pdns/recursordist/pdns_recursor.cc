@@ -186,6 +186,16 @@ int UDPClientSocks::makeClientSocket(int family, const std::optional<ComboAddres
       sin = *localAddress;
       sin.setPort(port);
     }
+    else if (!pdns::localInterface().empty()) {
+      string sourceItfName = pdns::localInterface();
+      int res = setsockopt(ret, SOL_SOCKET, SO_BINDTODEVICE, sourceItfName.c_str(), sourceItfName.length());
+      if (res != 0) {
+        int err = errno;
+        closesocket(ret);
+        throw PDNSException("Resolver binding to named interface " + sourceItfName + ": " + stringerror(err));
+      }
+      break;
+    }
     else {
       sin = pdns::getQueryLocalAddress(family, port); // does htons for us
     }

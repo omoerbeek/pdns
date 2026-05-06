@@ -22,6 +22,7 @@
 #pragma once
 
 #include "iputils.hh"
+#include "rec-rust-lib/cxxsettings.hh"
 
 namespace pdns {
   /*! pick a random query local address for family
@@ -56,4 +57,7 @@ namespace pdns {
    * @param family  Address Family, only AF_INET and AF_INET6 are supported
    */
   bool isQueryLocalAddressFamilyEnabled(const sa_family_t family);
+
+  std::string localInterface();
+  bool setSourceInterface(rust::settings::rec::Outgoing& outgoing);
 } // namespace pdns

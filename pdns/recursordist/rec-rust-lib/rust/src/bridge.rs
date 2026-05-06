@@ -874,6 +874,20 @@ impl OpenTelemetryTraceCondition {
     }
 }
 
+impl Interface {
+    fn to_yaml_map(&self) -> serde_yaml::Value {
+        let mut map = serde_yaml::Mapping::new();
+        inserts(&mut map, "name", &self.name);
+        insertb(&mut map, "ipv4", self.ipv4);
+        insertb(&mut map, "ipv6", self.ipv6);
+        serde_yaml::Value::Mapping(map)
+    }
+
+    pub fn validate(&self, _field: &str) -> Result<(), ValidationError> {
+        Ok(())
+    }
+}
+
 #[allow(clippy::ptr_arg)] //# Avoids creating a rust::Slice object on the C++ side.
 pub fn validate_auth_zones(field: &str, vec: &Vec<AuthZone>) -> Result<(), ValidationError> {
     validate_vec(field, vec, |field, element| element.validate(field))
@@ -1116,6 +1130,13 @@ pub fn map_to_yaml_string(vec: &Vec<OldStyle>) -> Result<String, serde_yaml::Err
                     "Vec<AuthZone>" => {
                         let mut seq = serde_yaml::Sequence::new();
                         for element in &entry.value.vec_authzone_val {
+                            seq.push(element.to_yaml_map());
+                        }
+                        serde_yaml::Value::Sequence(seq)
+                    }
+                    "Vec<Interface>" => {
+                        let mut seq = serde_yaml::Sequence::new();
+                        for element in &entry.value.vec_interface_val {
                             seq.push(element.to_yaml_map());
                         }
                         serde_yaml::Value::Sequence(seq)
@@ -1421,7 +1442,17 @@ pub fn validate_carbon(_carbon: &recsettings::Carbon) -> Result<(), ValidationEr
     Ok(())
 }
 
-pub fn validate_outgoing(_outgoing: &recsettings::Outgoing) -> Result<(), ValidationError> {
+pub fn validate_outgoing(outgoing: &recsettings::Outgoing) -> Result<(), ValidationError> {
+    if outgoing.source_address != DEFAULT_CONFIG.outgoing.source_address &&
+        outgoing.source_interface != DEFAULT_CONFIG.outgoing.source_interface {
+            let msg = String::from("incoming.source_address and incoming.source_interface: cannot both be set");
+            return Err(ValidationError { msg });
+        }
+    if outgoing.source_interface.len() > 1 {
+        return Err(ValidationError {
+            msg: String::from("number of outgoing.source_interfaces be <= 1"),
+        });
+    }
     Ok(())
 }
 

@@ -2363,6 +2363,18 @@ In the default configuration this means that IPv6 is not used for outgoing queri
         "versionchanged": ("4.4.0", "IPv6 addresses can be set with this option as well."),
     },
     {
+        "name": "source_interface",
+        "section": "outgoing",
+        "type": LType.ListInterfaces,
+        "default": "",
+        "help": "Source interface address for sending queries",
+        "doc": """
+        XXX
+ """,
+        "skip-old": "No equivalent old style setting",
+        "versionadded": "5.5.0"
+    },
+    {
         "name": "quiet",
         "section": "logging",
         "type": LType.Bool,

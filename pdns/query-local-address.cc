@@ -30,6 +30,15 @@ namespace pdns {
   static vector<ComboAddress> g_localQueryAddresses4;
   static vector<ComboAddress> g_localQueryAddresses6;
 
+  static std::string s_interfaceName;
+  static bool s_useV4;
+  static bool s_useV6;
+
+  std::string localInterface()
+  {
+    return s_interfaceName;
+  }
+
   ComboAddress getQueryLocalAddress(const sa_family_t family, const in_port_t port) {
     ComboAddress ret;
     if (family==AF_INET) {
@@ -88,13 +97,34 @@ namespace pdns {
     }
   }
 
-  bool isQueryLocalAddressFamilyEnabled(const sa_family_t family) {
+  bool isQueryLocalAddressFamilyEnabled(const sa_family_t family)
+  {
+    if (s_interfaceName.empty()) {
+        if (family == AF_INET) {
+          return !g_localQueryAddresses4.empty();
+        }
+        if (family == AF_INET6) {
+          return !g_localQueryAddresses6.empty();
+        }
+    }
     if (family == AF_INET) {
-      return !g_localQueryAddresses4.empty();
+      return s_useV4;
     }
     if (family == AF_INET6) {
-      return !g_localQueryAddresses6.empty();
+      return s_useV6;
     }
     return false;
   }
+
+  bool setSourceInterface(rust::settings::rec::Outgoing& outgoing)
+  {
+    if (outgoing.source_interface.size() > 0) {
+      s_interfaceName = std::string(outgoing.source_interface.at(0).name);
+      s_useV4 = outgoing.source_interface.at(0).ipv4;
+      s_useV6 = outgoing.source_interface.at(0).ipv6;
+      return true;
+    }
+    return false;
+  }
+  
 } // namespace pdns

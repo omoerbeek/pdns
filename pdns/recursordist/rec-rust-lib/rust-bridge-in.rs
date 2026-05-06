@@ -382,6 +382,17 @@ struct OpenTelemetryTraceCondition {
     traceid_only: bool,
 }
 
+#[derive(Default, Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct Interface {
+    #[serde(default, skip_serializing_if = "crate::is_default")]
+    name: String,
+    #[serde(default = "crate::Bool::<true>::value", skip_serializing_if = "crate::if_true")]
+    ipv4: bool,
+    #[serde(default, skip_serializing_if = "crate::is_default")]
+    ipv6: bool,
+}
+
 // Two structs used to generated YAML based on a vector of name to value mappings
 // Cannot use Enum as CXX has only very basic Enum support
 struct Value {
@@ -405,6 +416,7 @@ struct Value {
     vec_forwardingcatalogzone_val: Vec<ForwardingCatalogZone>,
     vec_incomingwsconfig_val: Vec<IncomingWSConfig>,
     vec_outgoingtlsconfiguration_val: Vec<OutgoingTLSConfiguration>,
+    vec_interface_val: Vec<Interface>,
 }
 
 struct OldStyle {

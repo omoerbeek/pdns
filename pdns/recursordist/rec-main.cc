@@ -1653,14 +1653,20 @@ template RemoteLoggerStats_t broadcastAccFunction(const std::function<RemoteLogg
 static int initNet(Logr::log_t log)
 {
   checkLinuxIPv6Limits(log);
-  try {
-    pdns::parseQueryLocalAddress(::arg()["query-local-address"]);
+  bool interface = false;
+  if (g_yamlSettings) {
+    auto lock = g_yamlStruct.lock();
+    interface = pdns::setSourceInterface(lock->outgoing);
   }
-  catch (std::exception& e) {
-    log->error(Logr::Error, e.what(), "Unable to assign local query address");
-    return 99;
+  if (!interface) {
+    try {
+      pdns::parseQueryLocalAddress(::arg()["query-local-address"]);
+    }
+    catch (std::exception& e) {
+      log->error(Logr::Error, e.what(), "Unable to assign local query address");
+      return 99;
+    }
   }
-
   if (pdns::isQueryLocalAddressFamilyEnabled(AF_INET)) {
     SyncRes::s_doIPv4 = true;
     log->info(Logr::Notice, "Enabling IPv4 transport for outgoing queries");

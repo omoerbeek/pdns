@@ -106,6 +106,7 @@ class LType(Enum):
     ListForwardZones = auto()
     ListForwardingCatalogZones = auto()
     ListIncomingWSConfigs = auto()
+    ListInterfaces = auto()
     ListNegativeTrustAnchors = auto()
     ListProtobufServers = auto()
     ListProxyMappings = auto()
@@ -131,6 +132,7 @@ listOfStructuredTypes = (
     LType.ListProtobufServers,
     LType.ListDNSTapFrameStreamServers,
     LType.ListDNSTapNODFrameStreamServers,
+    LType.ListInterfaces,
     LType.ListSortLists,
     LType.ListRPZs,
     LType.ListZoneToCaches,
@@ -214,6 +216,8 @@ def get_newdoc_typename(typ):
         return "Sequence of `OutgoingTLSConfiguration`_"
     if typ == LType.ListOpenTelemetryTraceConditions:
         return "Sequence of `OpenTelemetryTraceCondition`_"
+    if typ == LType.ListInterfaces:
+        return "Sequence of `Interfaces`_"
     return "Unknown2" + str(typ)
 
 
