@@ -47,7 +47,8 @@ void MiniCurl::init()
   }
 }
 
-MiniCurl::MiniCurl(const string& useragent, bool failonerror) : d_failonerror(failonerror)
+MiniCurl::MiniCurl(const string& useragent, bool failonerror) :
+  d_failonerror(failonerror)
 {
 #ifdef CURL_STRICTER
   d_curl = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_easy_init(), curl_easy_cleanup);

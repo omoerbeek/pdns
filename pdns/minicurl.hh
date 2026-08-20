@@ -44,8 +44,6 @@ public:
   static void init();
 
   MiniCurl(const string& useragent = "MiniCurl/0.0", bool failonerror = true);
-  MiniCurl(std::string d_data, bool d_failonerror) :
-    d_data(std::move(d_data)), d_failonerror(d_failonerror) { }
   ~MiniCurl();
   MiniCurl(const MiniCurl&) = delete;
   MiniCurl(MiniCurl&&) = delete;

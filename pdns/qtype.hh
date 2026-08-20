@@ -45,7 +45,8 @@
 class QType
 {
 public:
-  QType(uint16_t qtype = 0) : code(qtype) { }
+  QType(uint16_t qtype = 0) :
+    code(qtype) {}
   QType& operator=(const char*);
   QType& operator=(const std::string&);
 
@@ -192,7 +193,8 @@ inline size_t hash_value(const QType qtype)
 
 struct QClass
 {
-  constexpr QClass(uint16_t code = 0) : qclass(code) { }
+  constexpr QClass(uint16_t code = 0) :
+    qclass(code) {}
   explicit QClass(const std::string& code);
 
   constexpr operator uint16_t() const
