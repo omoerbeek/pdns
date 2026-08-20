@@ -44,7 +44,12 @@ public:
   static void init();
 
   MiniCurl(const string& useragent="MiniCurl/0.0", bool failonerror=true);
+  MiniCurl(std::string d_data, bool d_failonerror) :
+    d_data(std::move(d_data)), d_failonerror(d_failonerror) {}
   ~MiniCurl();
+  MiniCurl(const MiniCurl&) = delete;
+  MiniCurl(MiniCurl&&) = delete;
+  MiniCurl& operator=(MiniCurl&&) = delete;
   MiniCurl& operator=(const MiniCurl&) = delete;
 
   std::string getURL(const std::string& str, const ComboAddress* rem=nullptr, const ComboAddress* src=nullptr, int timeout = 2, const MiniCurlHeaders* headers = nullptr, bool fastopen = false, bool verify = false, size_t byteslimit = 0, int http_status = 200);
