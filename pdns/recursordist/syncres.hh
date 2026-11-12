@@ -297,6 +297,7 @@ public:
   static size_t getSaveParentsNSSetsSize();
   static void pruneSaveParentsNSSets(time_t now);
 
+  static uint64_t clearDoTProbeMap(vector<string>::iterator begin, vector<string>::iterator end);
   static void pruneDoTProbeMap(time_t cutoff);
 
   static void setDomainMap(std::shared_ptr<domainmap_t> newMap)

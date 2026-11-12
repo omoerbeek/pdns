@@ -2008,6 +2008,7 @@ static RecursorControlChannel::Answer help(ArgIterator /* begin */, ArgIterator 
     {"add-cookies-unsupported [IP...]", "Add non-expiring 'Unsupported' entry for IP to cookie table"},
     {"add-dont-throttle-names [N...]", "Add names that are not allowed to be throttled"},
     {"add-dont-throttle-netmasks [N...]", "Add netmasks that are not allowed to be throttled"},
+    {"clear-dot-probe-entries [IP...]", "Cleat entries from DoT probe map, if IP is '*' remove all entries"},
     {"add-nta DOMAIN [REASON]", "Add a Negative Trust Anchor for DOMAIN with the comment REASON"},
     {"add-ta DOMAIN DSRECORD", "Add a Trust Anchor for DOMAIN with data DSRECORD"},
     {"current-queries", "Show currently active queries"},
@@ -2394,6 +2395,9 @@ RecursorControlChannel::Answer RecursorControlParser::getAnswer(int socket, cons
        return {0, DNSCryptoKeyEngine::listSupportedAlgoNames(g_slog->withName("control"))};
      }},
     {"set-max-aggr-nsec-cache-size", setMaxAggrNSECCacheSize},
+    {"clear-dot-probe-entries", [](ArgIterator begin, ArgIterator end) -> Answer {
+      return {0, std::to_string(SyncRes::clearDoTProbeMap(begin, end)) + " DoT probe entries cleared\n"};
+    }},
   };
 
   if (const auto entry = commands.find(cmd); entry != commands.end()) {

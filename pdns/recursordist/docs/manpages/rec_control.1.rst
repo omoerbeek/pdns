@@ -112,6 +112,10 @@ Commands
 
     Remove netmasks that are not allowed to be throttled. If *NETMASK* is ``*``, remove all
 
+.. option:: clear-dot-probe-map <IP> [IP]...
+
+    Clear entries from the DoT probe map. If *IP* is ``*``, remove all
+
 .. option:: clear-nta <DOMAIN> [DOMAIN]...
 
     Remove Negative Trust Anchor for one or more *DOMAIN*\ s. Set domain to

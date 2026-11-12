@@ -1415,6 +1415,42 @@ void SyncRes::pruneDoTProbeMap(time_t cutoff)
   }
 }
 
+uint64_t SyncRes::clearDoTProbeMap(vector<string>::iterator begin, vector<string>::iterator end)
+{
+  auto lock = s_dotMap.lock();
+  auto& map = lock->d_map;
+
+  if (begin == end) {
+    return 0;
+  }
+
+  uint64_t count = 0;
+  if (*begin == "*") {
+    count = map.size();
+    map.clear();
+    lock->d_numBusy = 0;
+    return count;
+  }
+  while (begin != end) {
+    try {
+      auto found = map.find(ComboAddress(*begin, 853));
+      if (found != map.end()) {
+        auto busy = found->d_status == DoTStatus::Status::Busy;
+        map.erase(found);
+        if (busy) {
+          lock->d_numBusy--;
+        }
+        ++count;
+      }
+    }
+    catch (const PDNSException &) {
+      ;
+    }
+    ++begin;
+  }
+  return count;
+}
+
 uint64_t SyncRes::doDumpDoTProbeMap(int fileDesc)
 {
   int newfd = dup(fileDesc);
